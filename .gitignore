@@ -12,6 +12,9 @@ topic_modeling_venv/
 .ipynb_checkpoints
 .idea
 
+#dataset
+nytimes_front_page.csv
+
 # User-specific files
 *.rsuser
 *.suo
