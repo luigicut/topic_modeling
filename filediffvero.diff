@@ -1,0 +1,469 @@
+diff --git a/core/provisioning-api/pom.xml b/core/provisioning-api/pom.xml
+index 6da0358c1b..8a1b283b56 100644
+--- a/core/provisioning-api/pom.xml
++++ b/core/provisioning-api/pom.xml
+@@ -80,6 +80,12 @@ under the License.
+       <version>${project.version}</version>
+     </dependency>
+ 
++    <dependency>
++      <groupId>org.slf4j</groupId>
++      <artifactId>slf4j-simple</artifactId>
++      <version>${slf4j.version}</version>
++      <scope>test</scope>
++    </dependency>
+     <dependency>
+       <groupId>org.mockito</groupId>
+       <artifactId>mockito-core</artifactId>
+diff --git a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/ClassFreeUberspect.java b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/ClassFreeUberspect.java
+deleted file mode 100644
+index e218836a28..0000000000
+--- a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/ClassFreeUberspect.java
++++ /dev/null
+@@ -1,41 +0,0 @@
+-/*
+- * Licensed to the Apache Software Foundation (ASF) under one
+- * or more contributor license agreements.  See the NOTICE file
+- * distributed with this work for additional information
+- * regarding copyright ownership.  The ASF licenses this file
+- * to you under the Apache License, Version 2.0 (the
+- * "License"); you may not use this file except in compliance
+- * with the License.  You may obtain a copy of the License at
+- *
+- *   http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing,
+- * software distributed under the License is distributed on an
+- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+- * KIND, either express or implied.  See the License for the
+- * specific language governing permissions and limitations
+- * under the License.
+- */
+-package org.apache.syncope.core.provisioning.api.jexl;
+-
+-import org.apache.commons.jexl3.internal.introspection.Uberspect;
+-import org.apache.commons.jexl3.introspection.JexlMethod;
+-import org.apache.commons.jexl3.introspection.JexlPropertyGet;
+-
+-class ClassFreeUberspect extends Uberspect {
+-
+-    ClassFreeUberspect() {
+-        super(null, null);
+-    }
+-
+-    @Override
+-    public JexlPropertyGet getPropertyGet(final Object obj, final Object identifier) {
+-        return "class".equals(identifier) ? null : super.getPropertyGet(obj, identifier);
+-    }
+-
+-    @Override
+-    public JexlMethod getMethod(final Object obj, final String method, final Object... args) {
+-        return "getClass".equals(method) ? null : super.getMethod(obj, method, args);
+-    }
+-
+-}
+diff --git a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/EmptyClassLoader.java b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/EmptyClassLoader.java
+index 2457d7f529..5a22d8c173 100644
+--- a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/EmptyClassLoader.java
++++ b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/EmptyClassLoader.java
+@@ -32,5 +32,4 @@ class EmptyClassLoader extends ClassLoader {
+     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
+         throw new ClassNotFoundException("This classloader won't attemp to load " + name);
+     }
+-
+ }
+diff --git a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/JexlUtils.java b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/JexlUtils.java
+index 08f99ef531..891accaa5a 100644
+--- a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/JexlUtils.java
++++ b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/JexlUtils.java
+@@ -65,8 +65,7 @@ public final class JexlUtils {
+     private static final String[] IGNORE_FIELDS = { "password", "clearPassword", "serialVersionUID", "class" };
+ 
+     private static final Map<Class<?>, Set<Pair<PropertyDescriptor, Field>>> FIELD_CACHE =
+-            Collections.<Class<?>, Set<Pair<PropertyDescriptor, Field>>>synchronizedMap(
+-                    new HashMap<Class<?>, Set<Pair<PropertyDescriptor, Field>>>());
++            Collections.synchronizedMap(new HashMap<Class<?>, Set<Pair<PropertyDescriptor, Field>>>());
+ 
+     private static JexlEngine JEXL_ENGINE;
+ 
+@@ -74,7 +73,7 @@ public final class JexlUtils {
+         synchronized (LOG) {
+             if (JEXL_ENGINE == null) {
+                 JEXL_ENGINE = new JexlBuilder().
+-                        uberspect(new ClassFreeUberspect()).
++                        uberspect(new SandboxUberspect()).
+                         loader(new EmptyClassLoader()).
+                         namespaces(Map.of("syncope", new SyncopeJexlFunctions())).
+                         cache(512).
+diff --git a/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/SandboxUberspect.java b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/SandboxUberspect.java
+new file mode 100644
+index 0000000000..08f9168fe5
+--- /dev/null
++++ b/core/provisioning-api/src/main/java/org/apache/syncope/core/provisioning/api/jexl/SandboxUberspect.java
+@@ -0,0 +1,105 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ */
++package org.apache.syncope.core.provisioning.api.jexl;
++
++import java.time.Instant;
++import java.util.Arrays;
++import java.util.Collection;
++import java.util.Collections;
++import java.util.Date;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Map;
++import java.util.Optional;
++import java.util.Set;
++import org.apache.commons.jexl3.JexlEngine;
++import org.apache.commons.jexl3.internal.introspection.Uberspect;
++import org.apache.commons.jexl3.introspection.JexlMethod;
++import org.apache.commons.jexl3.introspection.JexlPropertySet;
++import org.apache.commons.jexl3.introspection.JexlUberspect;
++import org.apache.commons.logging.LogFactory;
++import org.apache.syncope.common.lib.Attr;
++import org.apache.syncope.common.lib.to.AnyTO;
++import org.apache.syncope.common.lib.to.MembershipTO;
++import org.apache.syncope.common.lib.to.RealmTO;
++import org.apache.syncope.core.persistence.api.entity.Any;
++import org.apache.syncope.core.persistence.api.entity.Membership;
++import org.apache.syncope.core.persistence.api.entity.PlainAttr;
++import org.apache.syncope.core.persistence.api.entity.Realm;
++
++class SandboxUberspect extends Uberspect {
++
++    private static final Set<String> COLLECTION_METHODS = Collections.unmodifiableSet(new HashSet<>(
++            Arrays.asList("contains", "containsAll", "isEmpty", "size", "iterator", "toString")));
++
++    private static final Set<String> LIST_METHODS = Collections.unmodifiableSet(new HashSet<>(
++            Arrays.asList("get", "indexOf", "lastIndexOf", "toString")));
++
++    private static final Set<String> MAP_METHODS = Collections.unmodifiableSet(new HashSet<>(
++            Arrays.asList("get", "getOrDefault", "containsKey", "containsValue", "toString")));
++
++    SandboxUberspect() {
++        super(LogFactory.getLog(JexlEngine.class), JexlUberspect.JEXL_STRATEGY);
++    }
++
++    @Override
++    public JexlMethod getConstructor(final Object ctorHandle, final Object... args) {
++        return null;
++    }
++
++    @Override
++    public JexlMethod getMethod(final Object obj, final String method, final Object... args) {
++        if (obj instanceof AnyTO || obj instanceof Any
++                || obj instanceof PlainAttr || obj instanceof Attr
++                || obj instanceof MembershipTO || obj instanceof Membership
++                || obj instanceof Realm || obj instanceof RealmTO) {
++
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof SyncopeJexlFunctions) {
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof Optional) {
++            return super.getMethod(obj, method, args);
++        } else if (obj.getClass().isArray()) {
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof String) {
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof Date || obj instanceof Instant) {
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof Map && MAP_METHODS.contains(method)) {
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof List && (LIST_METHODS.contains(method) || COLLECTION_METHODS.contains(method))) {
++            return super.getMethod(obj, method, args);
++        } else if (obj instanceof Collection && COLLECTION_METHODS.contains(method)) {
++            return super.getMethod(obj, method, args);
++        }
++        return null;
++    }
++
++    @Override
++    public JexlPropertySet getPropertySet(final Object obj, final Object identifier, final Object arg) {
++        return null;
++    }
++
++    @Override
++    public JexlPropertySet getPropertySet(
++            final List<PropertyResolver> resolvers, final Object obj, final Object identifier, final Object arg) {
++
++        return null;
++    }
++}
+diff --git a/core/provisioning-java/src/test/java/org/apache/syncope/core/provisioning/java/jexl/MailTemplateTest.java b/core/provisioning-api/src/test/java/org/apache/syncope/core/provisioning/api/jexl/MailTemplateTest.java
+similarity index 58%
+rename from core/provisioning-java/src/test/java/org/apache/syncope/core/provisioning/java/jexl/MailTemplateTest.java
+rename to core/provisioning-api/src/test/java/org/apache/syncope/core/provisioning/api/jexl/MailTemplateTest.java
+index 60fb71837e..d83b2a6587 100644
+--- a/core/provisioning-java/src/test/java/org/apache/syncope/core/provisioning/java/jexl/MailTemplateTest.java
++++ b/core/provisioning-api/src/test/java/org/apache/syncope/core/provisioning/api/jexl/MailTemplateTest.java
+@@ -16,9 +16,7 @@
+  * specific language governing permissions and limitations
+  * under the License.
+  */
+-package org.apache.syncope.core.provisioning.java.jexl;
+-
+-import org.apache.syncope.core.provisioning.api.jexl.JexlUtils;
++package org.apache.syncope.core.provisioning.api.jexl;
+ 
+ import static org.junit.jupiter.api.Assertions.assertFalse;
+ import static org.junit.jupiter.api.Assertions.assertNotNull;
+@@ -36,17 +34,36 @@ import org.apache.commons.lang3.SerializationUtils;
+ import org.apache.syncope.common.lib.Attr;
+ import org.apache.syncope.common.lib.to.MembershipTO;
+ import org.apache.syncope.common.lib.to.UserTO;
+-import org.apache.syncope.core.persistence.api.dao.MailTemplateDAO;
+-import org.apache.syncope.core.provisioning.java.AbstractTest;
++import org.apache.syncope.core.provisioning.api.AbstractTest;
+ import org.junit.jupiter.api.Test;
+-import org.springframework.beans.factory.annotation.Autowired;
+-import org.springframework.transaction.annotation.Transactional;
+ 
+-@Transactional("Master")
+ public class MailTemplateTest extends AbstractTest {
+ 
+-    @Autowired
+-    private MailTemplateDAO mailTemplateDAO;
++    private static final String CONFIRM_PASSWORD_RESET_TEMPLATE =
++            "<html><body>"
++            + "<p>Hi,<br/> we are happy to inform you that the password request was successfully executed for "
++            + "your account.</p>  <p>Best regards.</p> </body> </html>";
++
++    private static final String REQUEST_PASSWORD_RESET_TEMPLATE = "Hi, a password reset was request for "
++            + "${user.getUsername()}.  In order to complete this request, you need to visit this link: "
++            + "http://localhost:9080/syncope-enduser/app/#!/confirmpasswordreset?token="
++            + "${input.get(0).replaceAll(' ', '%20')}"
++            + "If you did not request this reset, just ignore the present e-mail.  Best regards.";
++
++    private static final String OPTIN_TEMPLATE =
++            "<html> <body> <h3>Hi ${user.getPlainAttr(\"firstname\").get().values[0]} "
++            + "${user.getPlainAttr(\"surname\").get().values[0]}, welcome to Syncope!</h3>"
++            + "<p> Your username is ${user.username}.<br/>"
++            + "Your email address is ${user.getPlainAttr(\"email\").get().values[0]}."
++            + "Your email address inside a <a href=\"http://localhost/?email="
++            + "${user.getPlainAttr(\"email\").get().values[0].replace('@', '%40')}\">link</a>.</p>"
++            + "<p>This message was sent to the following recipients: <ul>\n $$ for (recipient: recipients) {\n"
++            + "   <li>${recipient.getPlainAttr(\"email\").get().values[0]}</li>\n $$ }\n </ul>\n"
++            + "  because one of the following events occurred: <ul>\n $$ for (event: events) {\n"
++            + "   <li>${event}</li>\n $$ }\n </ul>\n </p> \n $$ if (!empty(user.memberships)) {\n"
++            + " You have been provided with the following groups:\n <ul>\n"
++            + " $$ for(membership : user.memberships) {\n   <li>${membership.groupName}</li>\n $$ }\n"
++            + " </ul>\n $$ }\n </body> </html>";
+ 
+     private static String evaluate(final String template, final Map<String, Object> jexlVars) {
+         StringWriter writer = new StringWriter();
+@@ -58,10 +75,7 @@ public class MailTemplateTest extends AbstractTest {
+ 
+     @Test
+     public void confirmPasswordReset() throws IOException {
+-        String htmlBody = evaluate(
+-                mailTemplateDAO.find("confirmPasswordReset").getHTMLTemplate(),
+-                new HashMap<>());
+-
++        String htmlBody = evaluate(CONFIRM_PASSWORD_RESET_TEMPLATE, new HashMap<>());
+         assertNotNull(htmlBody);
+     }
+ 
+@@ -79,17 +93,15 @@ public class MailTemplateTest extends AbstractTest {
+         input.add(token);
+         ctx.put("input", input);
+ 
+-        String htmlBody = evaluate(
+-                mailTemplateDAO.find("requestPasswordReset").getHTMLTemplate(),
+-                ctx);
++        String textBody = evaluate(REQUEST_PASSWORD_RESET_TEMPLATE, ctx);
+ 
+-        assertNotNull(htmlBody);
+-        assertTrue(htmlBody.contains("a password reset was request for " + username + '.'));
+-        assertFalse(htmlBody.contains(
+-                "http://localhost:9080/syncope-enduser/confirmpasswordreset?token="
++        assertNotNull(textBody);
++        assertTrue(textBody.contains("a password reset was request for " + username + "."));
++        assertFalse(textBody.contains(
++                "http://localhost:9080/syncope-enduser/app/#!/confirmpasswordreset?token="
+                 + token));
+-        assertTrue(htmlBody.contains(
+-                "http://localhost:9080/syncope-enduser/confirmpasswordreset?token="
++        assertTrue(textBody.contains(
++                "http://localhost:9080/syncope-enduser/app/#!/confirmpasswordreset?token="
+                 + token.replaceAll(" ", "%20")));
+     }
+ 
+@@ -115,9 +127,9 @@ public class MailTemplateTest extends AbstractTest {
+         recipient.getPlainAttr("email").get().getValues().set(0, "another@syncope.apache.org");
+         ctx.put("recipients", List.of(recipient));
+ 
+-        String htmlBody = evaluate(
+-                mailTemplateDAO.find("optin").getHTMLTemplate(),
+-                ctx);
++        ctx.put("events", List.of("event1"));
++
++        String htmlBody = evaluate(OPTIN_TEMPLATE, ctx);
+ 
+         assertNotNull(htmlBody);
+ 
+@@ -125,5 +137,6 @@ public class MailTemplateTest extends AbstractTest {
+         assertTrue(htmlBody.contains("Your email address is john.doe@syncope.apache.org."));
+         assertTrue(htmlBody.contains("<li>another@syncope.apache.org</li>"));
+         assertTrue(htmlBody.contains("<li>a group</li>"));
++        assertTrue(htmlBody.contains("<li>event1</li>"));
+     }
+ }
+diff --git a/core/provisioning-java/src/test/java/org/apache/syncope/core/provisioning/java/jexl/MappingTest.java b/core/provisioning-api/src/test/java/org/apache/syncope/core/provisioning/api/jexl/MappingTest.java
+similarity index 54%
+rename from core/provisioning-java/src/test/java/org/apache/syncope/core/provisioning/java/jexl/MappingTest.java
+rename to core/provisioning-api/src/test/java/org/apache/syncope/core/provisioning/api/jexl/MappingTest.java
+index 862a866214..0199413bbc 100644
+--- a/core/provisioning-java/src/test/java/org/apache/syncope/core/provisioning/java/jexl/MappingTest.java
++++ b/core/provisioning-api/src/test/java/org/apache/syncope/core/provisioning/api/jexl/MappingTest.java
+@@ -16,71 +16,46 @@
+  * specific language governing permissions and limitations
+  * under the License.
+  */
+-package org.apache.syncope.core.provisioning.java.jexl;
+-
+-import org.apache.syncope.core.provisioning.api.jexl.JexlUtils;
++package org.apache.syncope.core.provisioning.api.jexl;
+ 
+ import static org.junit.jupiter.api.Assertions.assertEquals;
+ import static org.junit.jupiter.api.Assertions.assertNotNull;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.when;
+ 
+ import org.apache.commons.jexl3.JexlContext;
+ import org.apache.commons.jexl3.MapContext;
+-import org.apache.syncope.core.persistence.api.dao.AnyTypeDAO;
+-import org.apache.syncope.core.persistence.api.dao.ExternalResourceDAO;
+-import org.apache.syncope.core.persistence.api.dao.RealmDAO;
+-import org.apache.syncope.core.persistence.api.dao.UserDAO;
+ import org.apache.syncope.core.persistence.api.entity.Realm;
+-import org.apache.syncope.core.persistence.api.entity.resource.ExternalResource;
+-import org.apache.syncope.core.persistence.api.entity.resource.Provision;
+ import org.apache.syncope.core.persistence.api.entity.user.User;
+-import org.apache.syncope.core.provisioning.java.AbstractTest;
++import org.apache.syncope.core.provisioning.api.AbstractTest;
+ import org.junit.jupiter.api.Test;
+-import org.springframework.beans.factory.annotation.Autowired;
+-import org.springframework.transaction.annotation.Transactional;
+ 
+-@Transactional("Master")
+ public class MappingTest extends AbstractTest {
+ 
+-    @Autowired
+-    private ExternalResourceDAO resourceDAO;
+-
+-    @Autowired
+-    private AnyTypeDAO anyTypeDAO;
+-
+-    @Autowired
+-    private RealmDAO realmDAO;
+-
+-    @Autowired
+-    private UserDAO userDAO;
+-
+     @Test
+     public void anyConnObjectLink() {
+-        ExternalResource ldap = resourceDAO.find("resource-ldap");
+-        assertNotNull(ldap);
+-
+-        Provision provision = ldap.getProvision(anyTypeDAO.findUser()).get();
+-        assertNotNull(provision);
+-        assertNotNull(provision.getMapping());
+-        assertNotNull(provision.getMapping().getConnObjectLink());
++        Realm realm = mock(Realm.class);
++        when(realm.getFullPath()).thenReturn("/even");
+ 
+-        User user = userDAO.findByUsername("rossini");
++        User user = mock(User.class);
++        when(user.getUsername()).thenReturn("rossini");
++        when(user.getRealm()).thenReturn(realm);
+         assertNotNull(user);
+ 
+         JexlContext jexlContext = new MapContext();
+         JexlUtils.addFieldsToContext(user, jexlContext);
+-        JexlUtils.addPlainAttrsToContext(user.getPlainAttrs(), jexlContext);
+ 
+-        assertEquals(
+-                "uid=rossini,ou=people,o=isp",
+-                JexlUtils.evaluate(provision.getMapping().getConnObjectLink(), jexlContext));
++        String connObjectLink = "'uid=' + username + ',ou=people,o=isp'";
++        assertEquals("uid=rossini,ou=people,o=isp", JexlUtils.evaluate(connObjectLink, jexlContext));
+ 
+-        String connObjectLink = "'uid=' + username + realm.replaceAll('/', ',o=') + ',ou=people,o=isp'";
++        connObjectLink = "'uid=' + username + realm.replaceAll('/', ',o=') + ',ou=people,o=isp'";
+         assertEquals("uid=rossini,o=even,ou=people,o=isp", JexlUtils.evaluate(connObjectLink, jexlContext));
+     }
+ 
+     @Test
+     public void realmConnObjectLink() {
+-        Realm realm = realmDAO.findByFullPath("/even/two");
++        Realm realm = mock(Realm.class);
++        when(realm.getFullPath()).thenReturn("/even/two");
+         assertNotNull(realm);
+ 
+         JexlContext jexlContext = new MapContext();
+@@ -89,7 +64,7 @@ public class MappingTest extends AbstractTest {
+         String connObjectLink = "syncope:fullPath2Dn(fullPath, 'ou') + ',o=isp'";
+         assertEquals("ou=two,ou=even,o=isp", JexlUtils.evaluate(connObjectLink, jexlContext));
+ 
+-        realm = realmDAO.findByFullPath("/even");
++        when(realm.getFullPath()).thenReturn("/even");
+         assertNotNull(realm);
+ 
+         jexlContext = new MapContext();
+diff --git a/core/provisioning-api/src/test/resources/simplelogger.properties b/core/provisioning-api/src/test/resources/simplelogger.properties
+new file mode 100644
+index 0000000000..973e0096ff
+--- /dev/null
++++ b/core/provisioning-api/src/test/resources/simplelogger.properties
+@@ -0,0 +1,21 @@
++# Licensed to the Apache Software Foundation (ASF) under one
++# or more contributor license agreements.  See the NOTICE file
++# distributed with this work for additional information
++# regarding copyright ownership.  The ASF licenses this file
++# to you under the Apache License, Version 2.0 (the
++# "License"); you may not use this file except in compliance
++# with the License.  You may obtain a copy of the License at
++#
++#   http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing,
++# software distributed under the License is distributed on an
++# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++# KIND, either express or implied.  See the License for the
++# specific language governing permissions and limitations
++# under the License.
++
++# See http://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html
++# Possible values: "trace", "debug", "info", "warn", or "error"
++org.slf4j.simpleLogger.defaultLogLevel=debug
++
+diff --git a/core/provisioning-java/src/main/java/org/apache/syncope/core/provisioning/java/notification/DefaultNotificationManager.java b/core/provisioning-java/src/main/java/org/apache/syncope/core/provisioning/java/notification/DefaultNotificationManager.java
+index e1f9220ea9..b294c82b81 100644
+--- a/core/provisioning-java/src/main/java/org/apache/syncope/core/provisioning/java/notification/DefaultNotificationManager.java
++++ b/core/provisioning-java/src/main/java/org/apache/syncope/core/provisioning/java/notification/DefaultNotificationManager.java
+@@ -364,7 +364,7 @@ public class DefaultNotificationManager implements NotificationManager {
+                     } else if (any instanceof Group) {
+                         model.put("group", groupDataBinder.getGroupTO((Group) any, true));
+                     } else if (any instanceof AnyObject) {
+-                        model.put("group", anyObjectDataBinder.getAnyObjectTO((AnyObject) any, true));
++                        model.put("anyObject", anyObjectDataBinder.getAnyObjectTO((AnyObject) any, true));
+                     }
+ 
+                     NotificationTask notificationTask = getNotificationTask(notification, any, model);
