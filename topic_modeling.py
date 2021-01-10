@@ -21,39 +21,41 @@ from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
 import utils
 #%%
-cve = 'CVE-2020-11002'
-project_url= 'https://github.com/dropwizard/dropwizard'
-commit_sha= '74e211514db951a67b0e9ff75b0102704d4b204'
+cve = 'CVE-2020-10714'
+project_url= 'https://github.com/wildfly-security/wildfly-elytron'
+commit_sha= '34e897b69b2dca907bba3357af5c20a29a9c4f9e'
 
 current_working_directory = os.getcwd()
 print(current_working_directory)
 # %%
 os.chdir('diff_commits')
 
-if os.path.isdir('./'+cve) == False :
-  print('create folder...')
-  #creates a folder using CVE name
-  os.mkdir(cve)
-  # creiamo una cartella con il nome della CVE che conterrà il file diff che ha come nome il commit_sha
-  url = project_url+"/commit/"+commit_sha+".diff"
-  r = requests.get(url, allow_redirects=True)
-  os.chdir(cve)
-  # current_working_directory = os.getcwd()
-  open(commit_sha+'.diff', 'wb').write(r.content)
-else :
-  print('folder already exists')
-  os.chdir(cve)
-  print('in folder: '+os.getcwd())
+if not os.path.isdir('./'+cve):
+    print('create folder...')
+    # creates a folder using CVE name
+    os.mkdir(cve)
+    # get diff file from github website
+    url = project_url+"/commit/"+commit_sha+".diff"
+    r = requests.get(url, allow_redirects=True)
+    os.chdir(cve)
+    # create diff file with SHA name
+    to_create_file = open(commit_sha+'.diff', 'wb')
+    to_create_file.write(r.content)
+    to_create_file.close()
+else:
+    print('folder already exists')
+    os.chdir(cve)
+    print('in folder: '+os.getcwd())
 
 diff_file = open(commit_sha+'.diff', "r")
 
 
 # diff_file = open(commit_sha+'.diff', 'wb').write(r.content)
-os.chdir(current_working_directory)
+# os.chdir(current_working_directory)
 # %%
-#CONSIDERING ONLY LINES STARTING WITH "-" or "+" AND REMOVING LINES STARTING WITH "NOT_ALLOWED" WORDS
+# CONSIDERING ONLY LINES STARTING WITH "-" or "+" AND REMOVING LINES STARTING WITH "NOT_ALLOWED" WORDS
 # diff_file = open("filediffvero.diff", "r")
-output_file = open("filediffsolocommit.diff","w")
+output_file = open(commit_sha+"_cleaned.diff","w")
 not_allowed=["---","+++","-/*","- *","import","-#","+/*","+ *","+#","+package","-package","@"]
 for line in diff_file.readlines():
     if (line.startswith('-') or line.startswith('+')):
@@ -75,9 +77,10 @@ output_file.close()
 
 
 # %%
-output_file = open("filediffsolocommit.diff","r")
+output_file = open(commit_sha+"_cleaned.diff","r")
 #print(output_file.read())
-
+#returning to root directory
+os.chdir(current_working_directory)
 
 # %%
 diff_prova_vera= output_file.read().encode("utf-8")

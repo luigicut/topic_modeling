@@ -63,14 +63,32 @@ def dot_case_split(token):
 def filter_doc(doc):
     if type(doc) != spacy.tokens.doc.Doc:
         raise TypeError("The document should be a spacy.tokens.doc.Doc, which is created by means of nlp(")
-    
+    # create a list of tokens where each token must pass the following checks, No punct (spacy prop), No stops (spacy prop), the token must have at least one char, the token length must major then 1  
+    for token in doc:
+        print(token)
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
     for token in tokens:
+        tmp_result = list()
         if camel_case_split(token.text):
-            result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
+            tmp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
+            for token in tmp_result:
+                if snake_case_split(token):
+                    tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token)))]
+                    for token in tmp_result:
+                        if dot_case_split(token):
+                            tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token)))]
+                elif dot_case_split(token):
+                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token)))]
+                else:
+                    result.append(str(token).lower())
+            result += tmp_result
         elif snake_case_split(token.text):
-            result += [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
+            tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
+            for token in tmp_result:
+                if dot_case_split(token):
+                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token)))]
+            result += tmp_result
         elif dot_case_split(token.text):
             result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token.text)))]
 
