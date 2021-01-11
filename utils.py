@@ -42,7 +42,7 @@ def snake_case_split(token):
         return 
     return result
 
-def dot_case_split(token):
+def special_chars_split(token):
     '''
     Splits a dot.case token into a list of tokens,
 
@@ -78,25 +78,25 @@ def filter_doc(doc):
                 if snake_case_split(token):
                     tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token)))]
                     for token in tmp_result:
-                        if dot_case_split(token):
-                            tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token)))]
-                            result += [res for res in tmp_result if not res.isspace()]
-                elif dot_case_split(token):
-                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token)))]
-                    result += [res for res in tmp_result if not res.isspace()]
+                        if special_chars_split(token):
+                            tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
+                            result += [res for res in tmp_result if not res.isspace() and len(res) > 1]
+                elif special_chars_split(token):
+                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
+                    result += [res for res in tmp_result if not res.isspace() and len(res) > 1]
                 else:
                   #check if token not contains only spaces 
-                  if not token.isspace():
+                  if not token.isspace() and len(token) > 1:
                     result.append(str(token).lower())
             # result += [res for res in tmp_result if not res.isspace()]
         elif snake_case_split(token.text):
             tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
             for token in tmp_result:
-                if dot_case_split(token):
-                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token)))]
-                    result += [res for res in tmp_result if not res.isspace()]
-        elif dot_case_split(token.text):
-            result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(dot_case_split(token.text))) if not dot_case_token.lemma_.isspace()]
+                if special_chars_split(token):
+                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
+                    result += [res for res in tmp_result if not res.isspace() and len(res) > 1]
+        elif special_chars_split(token.text):
+            result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text))) if not dot_case_token.lemma_.isspace() and len(dot_case_token.lemma_) > 1]
 
         else:
             result.append(str(token.lemma_).lower())

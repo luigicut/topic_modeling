@@ -6,6 +6,7 @@ import pandas as pd
 import re
 import os
 import requests
+import yaml
 
 import gensim
 import gensim.corpora as corpora
@@ -21,15 +22,25 @@ from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
 import utils
 #%%
-cve = 'CVE-2020-1961'
-project_url= 'https://github.com/apache/syncope'
-commit_sha= 'e07263dedad7ed44e188abb11260fa3061afadc4'
+cve = 'CVE-2019-3774'
+
 
 current_working_directory = os.getcwd()
 print(current_working_directory)
 # %%
-os.chdir('diff_commits')
 
+statments_yaml = open("statements/"+cve+"/statement.yaml",'r')
+parsed_statments =  yaml.load(statments_yaml, Loader=yaml.FullLoader)
+project_url = ''
+commit_sha = ''
+
+if  'fixes' in parsed_statments:
+    project_url = parsed_statments['fixes'][0]['commits'][0]['repository']
+    commit_sha = parsed_statments['fixes'][0]['commits'][0]['id']
+else:
+    raise SystemExit("please provide project URL and fix commit SHA and restart")
+
+os.chdir('diff_commits')
 if not os.path.isdir('./'+cve):
     print('create folder...')
     # creates a folder using CVE name
@@ -83,8 +94,9 @@ output_file = open(commit_sha+"_cleaned.diff","r")
 os.chdir(current_working_directory)
 
 # %%
-diff_prova_vera= output_file.read().encode("utf-8")
-#print()
+output_file_encoded = output_file.read().encode("utf-8")
+output_file.close()
+
 
 
 # %%
@@ -103,8 +115,13 @@ for word in STOP_WORDS:
 
 # %%
 #REMOVING ALL SNAKE,CAMEL,DOT WORDS
-processed_commit= utils.simpler_filter_text(str(diff_prova_vera))
+os.chdir('diff_commits/'+cve)
+processed_commit= utils.simpler_filter_text(str(output_file_encoded))
+corpus_file = open(commit_sha+"_cleaned.diff","w")
+corpus_file.write(processed_commit)
+corpus_file.close()
 print(processed_commit)
+os.chdir(current_working_directory)
 #REMOVING BREAKLINE
 # processed_commit= processed_commit.replace(r'/(\r\n|\n|\r)/gm', " ")
 
