@@ -21,9 +21,9 @@ from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
 import utils
 #%%
-cve = 'CVE-2020-10714'
-project_url= 'https://github.com/wildfly-security/wildfly-elytron'
-commit_sha= '34e897b69b2dca907bba3357af5c20a29a9c4f9e'
+cve = 'CVE-2020-1961'
+project_url= 'https://github.com/apache/syncope'
+commit_sha= 'e07263dedad7ed44e188abb11260fa3061afadc4'
 
 current_working_directory = os.getcwd()
 print(current_working_directory)
@@ -104,9 +104,9 @@ for word in STOP_WORDS:
 # %%
 #REMOVING ALL SNAKE,CAMEL,DOT WORDS
 processed_commit= utils.simpler_filter_text(str(diff_prova_vera))
-
+print(processed_commit)
 #REMOVING BREAKLINE
-processed_commit= processed_commit.replace(r'/(\r\n|\n|\r)/gm', " ")
+# processed_commit= processed_commit.replace(r'/(\r\n|\n|\r)/gm', " ")
 
 #REMOVING SPECIAL CHARACTER
 #processed_commit=re.sub('/^[a-z\d\-_\s]+$/i', '', processed_commit)
