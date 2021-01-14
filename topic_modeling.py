@@ -7,22 +7,20 @@ import re
 import os
 import requests
 import yaml
-
 import gensim
 import gensim.corpora as corpora
+import en_core_web_lg
+import spacy
+import utils
+
 from gensim.utils import simple_preprocess
 from gensim.models import CoherenceModel
-
-import spacy
 from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en.stop_words import STOP_WORDS
-import en_core_web_lg
-
 from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
-import utils
 #%%
-cve = 'CVE-2019-3774'
+cve = 'CVE-2020-10714'
 
 
 current_working_directory = os.getcwd()
