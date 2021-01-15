@@ -15,6 +15,7 @@ import utils
 
 from gensim.utils import simple_preprocess
 from gensim.models import CoherenceModel
+from gensim.test.utils import datapath
 from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en.stop_words import STOP_WORDS
 from tqdm import tqdm_notebook as tqdm
@@ -171,21 +172,41 @@ corpus = [words.doc2bow(doc) for doc in doc_list]
 
 
 # %%
-lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
-                                           id2word=words,
-                                           num_topics=1, 
-                                           random_state=2,
-                                           update_every=1,
-                                           passes=10,
-                                           alpha='auto',
-                                           per_word_topics=True)
+# lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
+#                                            id2word=words,
+#                                            num_topics=1, 
+#                                            random_state=2,
+#                                            update_every=1,
+#                                            passes=10,
+#                                            alpha='auto',
+#                                            per_word_topics=True)
 
 
 # %%
-pprint(lda_model.print_topics(num_words=40))
+#pprint(lda_model.print_topics(num_words=40))
 
 
 # %%
+temp_file = datapath("model")
+lda = gensim.models.ldamodel.LdaModel.load(temp_file)
+
+# def process_query(query):
+#     words = []
+#     words = query.split()
+#     return words
+
+# query_corpus= process_query(processed_commit)
+
+# %%
+new_prediction= lda[corpus]
+
+for  topic in new_prediction:
+    print(topic)
 
 
 
+# %%
+print(corpus)
+ 
+# %%
+print(words)
