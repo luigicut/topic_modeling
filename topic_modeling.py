@@ -190,6 +190,7 @@ corpus = [words.doc2bow(doc) for doc in doc_list]
 temp_file = datapath("model")
 lda = gensim.models.ldamodel.LdaModel.load(temp_file)
 
+pprint(lda.print_topics(num_words=40))
 # def process_query(query):
 #     words = []
 #     words = query.split()
@@ -198,15 +199,63 @@ lda = gensim.models.ldamodel.LdaModel.load(temp_file)
 # query_corpus= process_query(processed_commit)
 
 # %%
+print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
+
 new_prediction= lda[corpus]
 
 for  topic in new_prediction:
-    print(topic)
+    pprint(topic)
 
 
 
 # %%
-print(corpus)
+# word_count_array = np.empty((len(new_prediction), 2), dtype = np.object)
+# for i in range(len(new_prediction)):
+#     word_count_array[i, 0] = new_prediction[i][0]
+#     word_count_array[i, 1] = new_prediction[i][1]
+
+# idx = np.argsort(word_count_array[:, 1])
+# idx = idx[::-1]
+# word_count_array = word_count_array[idx]
+
+# final = []
+# final = lda.print_topic(word_count_array[0, 0], 1)
+
+# question_topic = final.split('*')
+
+# print(question_topic[1])
  
-# %%
-print(words)
+#%% 
+
+# def format_topics_sentences(ldamodel=lda, corpus=corpus):
+#     # Init output
+#     sent_topics_df = pd.DataFrame()
+
+#     # Get main topic in each document
+#     for i, row in enumerate(ldamodel[corpus]):
+#         row = sorted(row, key=lambda x: (x[0]), reverse=True)
+#         # Get the Dominant topic, Perc Contribution and Keywords for each document
+#         for j, (topic_num, prop_topic) in enumerate(row):
+#             if j == 0:  # => dominant topic
+#                 wp = ldamodel.show_topic(topic_num)
+#                 topic_keywords = ", ".join([word for word, prop in wp])
+#                 sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), round(prop_topic,4), topic_keywords]), ignore_index=True)
+#             else:
+#                 break
+#     sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
+
+#     # Add original text to the end of the output
+#     # contents = pd.Series(texts)
+#     # sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
+#     return(sent_topics_df)
+
+
+# df_topic_sents_keywords = format_topics_sentences(ldamodel=lda, corpus=corpus)
+
+# # Format
+# df_dominant_topic = df_topic_sents_keywords.reset_index()
+# df_dominant_topic.columns = ['Document_No', 'Dominant_Topic', 'Topic_Perc_Contrib', 'Keywords', 'Text']
+
+# # Show
+# df_dominant_topic.head(10)
+
