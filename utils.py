@@ -62,6 +62,37 @@ def special_chars_split(token):
         return 
     return result
 
+
+def string_not_spaces_or_one_char(s):
+    return not s.isspace() and len(s) > 1
+
+def str_not_special_upper(s):
+    '''
+    Checks if a string contains special characters and if contains at least one uppercase letter
+    '''
+    return bool(re.match('^[a-zA-Z0-9]*$',s)) and not any(x.isupper() for x in s)
+
+
+def split_funct(token, result):
+    if str_not_special_upper(token.lemma_):
+      if string_not_spaces_or_one_char(token.lemma_):
+        result.append(str(token.lemma_).lower())
+      return
+    else:
+        if camel_case_split(token.text):
+            temp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
+            for new_token in nlp(' '.join(temp_result)):
+                split_funct(new_token, result)
+        if snake_case_split(token.text):
+            temp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
+            for new_token in nlp(' '.join(temp_result)):
+                split_funct(new_token, result)
+        if special_chars_split(token.text):
+            temp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text)))]
+            for new_token in nlp(' '.join(temp_result)):
+                split_funct(new_token, result)
+
+
 def filter_doc(doc):
     if type(doc) != spacy.tokens.doc.Doc:
         raise TypeError("The document should be a spacy.tokens.doc.Doc, which is created by means of nlp(")
@@ -72,6 +103,7 @@ def filter_doc(doc):
     result = list()
     for token in tokens:
         tmp_result = list()
+        # split_funct(token, result)
         if camel_case_split(token.text):
             tmp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
             for token in tmp_result:
@@ -80,23 +112,22 @@ def filter_doc(doc):
                     for token in tmp_result:
                         if special_chars_split(token):
                             tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-                            result += [res for res in tmp_result if not res.isspace() and len(res) > 1]
+                            result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
                 elif special_chars_split(token):
                     tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-                    result += [res for res in tmp_result if not res.isspace() and len(res) > 1]
+                    result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
                 else:
                   #check if token not contains only spaces 
-                  if not token.isspace() and len(token) > 1:
+                  if string_not_spaces_or_one_char(token):
                     result.append(str(token).lower())
-            # result += [res for res in tmp_result if not res.isspace()]
         elif snake_case_split(token.text):
             tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
             for token in tmp_result:
                 if special_chars_split(token):
                     tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-                    result += [res for res in tmp_result if not res.isspace() and len(res) > 1]
+                    result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
         elif special_chars_split(token.text):
-            result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text))) if not dot_case_token.lemma_.isspace() and len(dot_case_token.lemma_) > 1]
+            result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_one_char(dot_case_token.lemma_)]
 
         else:
             result.append(str(token.lemma_).lower())
