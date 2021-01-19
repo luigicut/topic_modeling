@@ -20,6 +20,7 @@ from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en.stop_words import STOP_WORDS
 from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
+from collections import defaultdict
 #%%
 cve = 'CVE-2020-10714'
 
@@ -201,11 +202,14 @@ pprint(lda.print_topics(num_words=40))
 # %%
 print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
 
+#new_text_corpus =  words.doc2bow(corpus[0].split())
 new_prediction= lda[corpus]
 
 for  topic in new_prediction:
     pprint(topic)
 
+#pred = lda.get_document_topics(corpus)
+# print(pred)
 
 
 # %%
@@ -227,17 +231,52 @@ for  topic in new_prediction:
  
 #%% 
 
+# def format_topics_sentences(ldamodel, corpus):
+#     # Init output
+#     sent_topics_df = pd.DataFrame()
+#     #pprint(lda.print_topics(num_words=40))
+#     #print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
+#     # Get main topic in each document
+#     for i, row in enumerate(ldamodel[corpus][0]):
+#         row = sorted(row, key=lambda x: (x[1]), reverse=True)
+#         # Get the Dominant topic, Perc Contribution and Keywords for each document
+#         for j, (topic_num, prop_topic) in enumerate(row):
+#             if j == 0:  # => dominant topic
+#                 wp = ldamodel.show_topic(topic_num)
+#                 topic_keywords = ", ".join([word for word, prop in wp])
+#                 sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), prop_topic, topic_keywords]), ignore_index=True)
+#             else:
+#                 break
+#     sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
+
+#     # Add original text to the end of the output
+#     # contents = pd.Series(texts)
+#     # sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
+#     return(sent_topics_df)
+
+
+# df_topic_sents_keywords = format_topics_sentences(ldamodel=lda, corpus=corpus)
+
+# # Format
+# df_dominant_topic = df_topic_sents_keywords.reset_index()
+# df_dominant_topic.columns = ['Document_No', 'Dominant_Topic', 'Topic_Perc_Contrib', 'Keywords']
+
+# # Show
+# df_dominant_topic.head(10)
+
+
+# %%
 def format_topics_sentences(ldamodel, corpus):
-    # Init output
+# Init output
     sent_topics_df = pd.DataFrame()
-    pprint(lda.print_topics(num_words=40))
-    print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
+
     # Get main topic in each document
     for i, row in enumerate(ldamodel[corpus]):
-        row = sorted(row, key=lambda x: (x[0]), reverse=True)
+        row = sorted(row[0], key=lambda x: (x[1]), reverse=True)
+        # row = sorted(row, key=lambda x: (x[1]), reverse=True) # old line
         # Get the Dominant topic, Perc Contribution and Keywords for each document
         for j, (topic_num, prop_topic) in enumerate(row):
-            if j == 0:  # => dominant topic
+            if j == 0: # => dominant topic
                 wp = ldamodel.show_topic(topic_num)
                 topic_keywords = ", ".join([word for word, prop in wp])
                 sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), round(prop_topic,4), topic_keywords]), ignore_index=True)
@@ -252,6 +291,7 @@ def format_topics_sentences(ldamodel, corpus):
 
 
 df_topic_sents_keywords = format_topics_sentences(ldamodel=lda, corpus=corpus)
+#df_topic_sents_keywords = format_topics_sentences(ldamodel=optimal_model, corpus=corpus, texts=data)
 
 # Format
 df_dominant_topic = df_topic_sents_keywords.reset_index()
@@ -260,3 +300,18 @@ df_dominant_topic.columns = ['Document_No', 'Dominant_Topic', 'Topic_Perc_Contri
 # Show
 df_dominant_topic.head(10)
 
+#%%
+
+new_prediction = new_prediction[0][2]
+words_concat = [[(words[id], freq) for id, freq in cp] for cp in corpus[:1]]
+words_concat = words_concat[0]
+final_prediction = []
+
+
+for i, elements in enumerate(words_concat):
+    final_prediction.append((elements[0], new_prediction[i][1][0][1]))
+    
+
+print(final_prediction)
+
+# %%
