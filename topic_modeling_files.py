@@ -98,7 +98,7 @@ nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 
 # %%
 
-def process_files(file_name):
+def process_file(file_name):
     print("File name :"+file_name+"\n" )
     os.chdir('committed_files')
     output_file = open(file_name,"r")
@@ -110,6 +110,9 @@ def process_files(file_name):
     corpus_file.write(processed_file)
     corpus_file.close()
     os.chdir(current_working_directory)
+    return processed_file
+
+def make_prediction(processed_file):
     doc_list = []
     pr=nlp(str(processed_file))
     doc_list.append(pr)
@@ -117,7 +120,7 @@ def process_files(file_name):
     words = corpora.Dictionary(doc_list)
     # Turns each document into a bag of words.
     corpus = [words.doc2bow(doc) for doc in doc_list]
-    temp_file = datapath("model")
+    temp_file = datapath("model"+cve)
     lda = gensim.models.ldamodel.LdaModel.load(temp_file)
     new_prediction= lda[corpus]
     new_prediction = new_prediction[0][2]
@@ -127,7 +130,6 @@ def process_files(file_name):
     for i, elements in enumerate(words_concat):
         final_prediction.append((elements[0], new_prediction[i][1][0][1]))
     final_prediction = sorted(final_prediction, key=lambda x: (x[1]), reverse=True)
-    
     print(final_prediction)
     print("\n\n\n\n") 
 
@@ -136,9 +138,12 @@ def process_files(file_name):
 #%%
 
 os.chdir('diff_commits/'+cve)
+output_file = open("joint_files.txt","a+",encoding="utf-8")
 for root, dirs, files in os.walk('committed_files'):
     for file in files:
-        process_files(file)
+        processed_file = process_file(file)
+        output_file.write(processed_file+' ')
+        make_prediction(processed_file)
         os.chdir(current_working_directory+'/diff_commits/'+cve)
         # with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
         #         print(tmp_file.name)
@@ -152,7 +157,11 @@ for root, dirs, files in os.walk('committed_files'):
         #             output_file.write(tmp_file.read()+' ')
         #         tmp_file.close()
         #         byte_tmp_file.close()
-
+output_file.close()
+output_file = open("joint_files.txt","r",encoding="utf-8")
+print("\n\n")
+print("joint file prediction")
+make_prediction(output_file.read())
 
 
 
