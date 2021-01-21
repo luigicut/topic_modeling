@@ -12,6 +12,7 @@ import gensim.corpora as corpora
 import en_core_web_lg
 import spacy
 import utils
+import chardet
 
 from gensim.utils import simple_preprocess
 from gensim.models import CoherenceModel
@@ -66,29 +67,36 @@ diff_file = open(commit_sha+'.diff', "r")
 # %%
 # CONSIDERING ONLY LINES STARTING WITH "-" or "+" AND REMOVING LINES STARTING WITH "NOT_ALLOWED" WORDS
 # diff_file = open("filediffvero.diff", "r")
-output_file = open(commit_sha+"_cleaned.diff","w")
-not_allowed=["---","+++","-/*","- *","import","-#","+/*","+ *","+#","+package","-package","@"]
-for line in diff_file.readlines():
-    if (line.startswith('-') or line.startswith('+')):
-            if not any(not_allowed in line for not_allowed in not_allowed):
-                #way to do multiple sub in a single sentence
-                # rep = {"Set<": " ", "Pair<": " ","Field>>>": " "} 
-                # rep = dict((re.escape(k), v) for k, v in rep.items()) 
-                # pattern = re.compile("|".join(rep.keys()))
-                # line_no_set_pair = pattern.sub(lambda m: rep[re.escape(m.group(0))], line)
-                line_no_html_tags= re.sub(r'<.*?>', '',line)
-                #REMOVE EMPTY LINES
-                if (len(line_no_html_tags.split())> 1):
-                    #ASSUMING THAT THE FIRST CHAR IS ALWAYS A "+" OR "-" WE'RE REMOVING IT
-                    cleaned_line = line_no_html_tags[1:]
-                    #REMOVING LEADING SPACES
-                    cleaned_line = cleaned_line.strip()
-                    output_file.write(cleaned_line)
-output_file.close()
+
+# output_file = open(commit_sha+"_cleaned.diff","w")
+# output_file = open("committed_file_1_FormAuthenticationMechanism.java","w")
+
+# not_allowed=["---","+++","-/*","- *","import","-#","+/*","+ *","+#","+package","-package","@"]
+# for line in diff_file.readlines():
+#     if (line.startswith('-') or line.startswith('+')):
+#             if not any(not_allowed in line for not_allowed in not_allowed):
+#                 #way to do multiple sub in a single sentence
+#                 # rep = {"Set<": " ", "Pair<": " ","Field>>>": " "} 
+#                 # rep = dict((re.escape(k), v) for k, v in rep.items()) 
+#                 # pattern = re.compile("|".join(rep.keys()))
+#                 # line_no_set_pair = pattern.sub(lambda m: rep[re.escape(m.group(0))], line)
+#                 line_no_html_tags= re.sub(r'<.*?>', '',line)
+#                 #REMOVE EMPTY LINES
+#                 if (len(line_no_html_tags.split())> 1):
+#                     #ASSUMING THAT THE FIRST CHAR IS ALWAYS A "+" OR "-" WE'RE REMOVING IT
+#                     cleaned_line = line_no_html_tags[1:]
+#                     #REMOVING LEADING SPACES
+#                     cleaned_line = cleaned_line.strip()
+#                     output_file.write(cleaned_line)
+# output_file.close()
 
 
 # %%
-output_file = open(commit_sha+"_cleaned.diff","r")
+output_file = open("committed_file_1_FormAuthenticationMechanism.java","r")
+# print("file: "+output_file.read())
+byte_tmp_file = open("committed_file_1_FormAuthenticationMechanism.java", "rb")
+file_type = chardet.detect(byte_tmp_file.read())['encoding']
+print(file_type)
 #print(output_file.read())
 #returning to root directory
 os.chdir(current_working_directory)
