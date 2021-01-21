@@ -23,7 +23,7 @@ from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
 from collections import defaultdict
 #%%
-cve = 'CVE-2020-10714'
+cve = 'CVE-2020-1961'
 
 
 current_working_directory = os.getcwd()
@@ -41,75 +41,31 @@ if  'fixes' in parsed_statments:
 else:
     raise SystemExit("please provide project URL and fix commit SHA and restart")
 
-os.chdir('diff_commits')
-if not os.path.isdir('./'+cve):
-    print('create folder...')
-    # creates a folder using CVE name
-    os.mkdir(cve)
-    # get diff file from github website
-    url = project_url+"/commit/"+commit_sha+".diff"
-    r = requests.get(url, allow_redirects=True)
-    os.chdir(cve)
-    # create diff file with SHA name
-    to_create_file = open(commit_sha+'.diff', 'wb')
-    to_create_file.write(r.content)
-    to_create_file.close()
-else:
-    print('folder already exists')
-    os.chdir(cve)
-    print('in folder: '+os.getcwd())
+# os.chdir('diff_commits')
+# if not os.path.isdir('./'+cve):
+#     print('create folder...')
+#     # creates a folder using CVE name
+#     os.mkdir(cve)
+#     # get diff file from github website
+#     url = project_url+"/commit/"+commit_sha+".diff"
+#     r = requests.get(url, allow_redirects=True)
+#     os.chdir(cve)
+#     # create diff file with SHA name
+#     to_create_file = open(commit_sha+'.diff', 'wb')
+#     to_create_file.write(r.content)
+#     to_create_file.close()
+# else:
+#     print('folder already exists')
+#     os.chdir(cve)
+#     print('in folder: '+os.getcwd())
 
-diff_file = open(commit_sha+'.diff', "r")
-
-
-# diff_file = open(commit_sha+'.diff', 'wb').write(r.content)
-# os.chdir(current_working_directory)
-# %%
-# CONSIDERING ONLY LINES STARTING WITH "-" or "+" AND REMOVING LINES STARTING WITH "NOT_ALLOWED" WORDS
-# diff_file = open("filediffvero.diff", "r")
-
-# output_file = open(commit_sha+"_cleaned.diff","w")
-# output_file = open("committed_file_1_FormAuthenticationMechanism.java","w")
-
-# not_allowed=["---","+++","-/*","- *","import","-#","+/*","+ *","+#","+package","-package","@"]
-# for line in diff_file.readlines():
-#     if (line.startswith('-') or line.startswith('+')):
-#             if not any(not_allowed in line for not_allowed in not_allowed):
-#                 #way to do multiple sub in a single sentence
-#                 # rep = {"Set<": " ", "Pair<": " ","Field>>>": " "} 
-#                 # rep = dict((re.escape(k), v) for k, v in rep.items()) 
-#                 # pattern = re.compile("|".join(rep.keys()))
-#                 # line_no_set_pair = pattern.sub(lambda m: rep[re.escape(m.group(0))], line)
-#                 line_no_html_tags= re.sub(r'<.*?>', '',line)
-#                 #REMOVE EMPTY LINES
-#                 if (len(line_no_html_tags.split())> 1):
-#                     #ASSUMING THAT THE FIRST CHAR IS ALWAYS A "+" OR "-" WE'RE REMOVING IT
-#                     cleaned_line = line_no_html_tags[1:]
-#                     #REMOVING LEADING SPACES
-#                     cleaned_line = cleaned_line.strip()
-#                     output_file.write(cleaned_line)
-# output_file.close()
+#diff_file = open(commit_sha+'.diff', "r")
 
 
 # %%
-output_file = open("committed_file_1_FormAuthenticationMechanism.java","r")
-# print("file: "+output_file.read())
-byte_tmp_file = open("committed_file_1_FormAuthenticationMechanism.java", "rb")
-file_type = chardet.detect(byte_tmp_file.read())['encoding']
-print(file_type)
-#print(output_file.read())
-#returning to root directory
-os.chdir(current_working_directory)
 
-# %%
-output_file_encoded = output_file.read().encode("utf-8")
-output_file.close()
-
-
-
-# %%
 nlp= spacy.load("en_core_web_sm")
-
+# os.chdir(current_working_directory)
 # My list of stop words.
 stop_word = open("stop_word.txt", "r")
 stop_list = stop_word.readline().split(",")
@@ -121,24 +77,7 @@ for word in STOP_WORDS:
     lexeme = nlp.vocab[word]
     lexeme.is_stop = True
 
-# %%
-#REMOVING ALL SNAKE,CAMEL,DOT WORDS
-os.chdir('diff_commits/'+cve)
-processed_commit= utils.simpler_filter_text(str(output_file_encoded))
-corpus_file = open(commit_sha+"_cleaned.diff","w")
-corpus_file.write(processed_commit)
-corpus_file.close()
-print(processed_commit)
-os.chdir(current_working_directory)
-#REMOVING BREAKLINE
-# processed_commit= processed_commit.replace(r'/(\r\n|\n|\r)/gm', " ")
-
-#REMOVING SPECIAL CHARACTER
-#processed_commit=re.sub('/^[a-z\d\-_\s]+$/i', '', processed_commit)
-# processed_commit=re.sub('[^a-zA-Z \n\.]', ' ', processed_commit) 
-
-
-# %%
+#%%
 def lemmatizer(doc):
     # This takes in a doc of tokens from the NER and lemmatizes them. 
     # Pronouns (like "I" and "you" get lemmatized to '-PRON-', so I'm removing those.
@@ -158,168 +97,151 @@ nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 
 
 # %%
-#doc_list = []
-# Iterates through each article in the corpus.
-#for doc in tqdm(newest_doc):
-    # Passes that article through the pipeline and adds to a new list.
-    #pr = nlp(doc)
-    #doc_list.append(pr)
+
+def process_files(file_name):
+    print("File name :"+file_name+"\n" )
+    os.chdir('committed_files')
+    output_file = open(file_name,"r")
+    # os.chdir(current_working_directory)
+    output_file_encoded = output_file.read().encode("utf-8")
+    output_file.close()
+    processed_file= utils.simpler_filter_text(str(output_file_encoded))
+    corpus_file = open(file_name+"_cleaned.txt","w")
+    corpus_file.write(processed_file)
+    corpus_file.close()
+    os.chdir(current_working_directory)
+    doc_list = []
+    pr=nlp(str(processed_file))
+    doc_list.append(pr)
+    # Creates, which is a mapping of word IDs to words.
+    words = corpora.Dictionary(doc_list)
+    # Turns each document into a bag of words.
+    corpus = [words.doc2bow(doc) for doc in doc_list]
+    temp_file = datapath("model")
+    lda = gensim.models.ldamodel.LdaModel.load(temp_file)
+    new_prediction= lda[corpus]
+    new_prediction = new_prediction[0][2]
+    words_concat = [[(words[id], freq) for id, freq in cp] for cp in corpus[:1]]
+    words_concat = words_concat[0]
+    final_prediction = []
+    for i, elements in enumerate(words_concat):
+        final_prediction.append((elements[0], new_prediction[i][1][0][1]))
+    final_prediction = sorted(final_prediction, key=lambda x: (x[1]), reverse=True)
+    
+    print(final_prediction)
+    print("\n\n\n\n") 
 
 
-# %%
-doc_list = []
-pr=nlp(str(processed_commit))
-doc_list.append(pr)
-
-
-# %%
-# Creates, which is a mapping of word IDs to words.
-words = corpora.Dictionary(doc_list)
-
-# Turns each document into a bag of words.
-corpus = [words.doc2bow(doc) for doc in doc_list]
-
-
-# %%
-# lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
-#                                            id2word=words,
-#                                            num_topics=1, 
-#                                            random_state=2,
-#                                            update_every=1,
-#                                            passes=10,
-#                                            alpha='auto',
-#                                            per_word_topics=True)
-
-
-# %%
-#pprint(lda_model.print_topics(num_words=40))
-
-
-# %%
-temp_file = datapath("model")
-lda = gensim.models.ldamodel.LdaModel.load(temp_file)
-
-pprint(lda.print_topics(num_words=40))
-# def process_query(query):
-#     words = []
-#     words = query.split()
-#     return words
-
-# query_corpus= process_query(processed_commit)
-
-# %%
-print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
-
-#new_text_corpus =  words.doc2bow(corpus[0].split())
-new_prediction= lda[corpus]
-
-for  topic in new_prediction:
-    pprint(topic)
-
-#pred = lda.get_document_topics(corpus)
-# print(pred)
-
-
-# %%
-# word_count_array = np.empty((len(new_prediction), 2), dtype = np.object)
-# for i in range(len(new_prediction)):
-#     word_count_array[i, 0] = new_prediction[i][0]
-#     word_count_array[i, 1] = new_prediction[i][1]
-
-# idx = np.argsort(word_count_array[:, 1])
-# idx = idx[::-1]
-# word_count_array = word_count_array[idx]
-
-# final = []
-# final = lda.print_topic(word_count_array[0, 0], 1)
-
-# question_topic = final.split('*')
-
-# print(question_topic[1])
- 
-#%% 
-
-# def format_topics_sentences(ldamodel, corpus):
-#     # Init output
-#     sent_topics_df = pd.DataFrame()
-#     #pprint(lda.print_topics(num_words=40))
-#     #print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
-#     # Get main topic in each document
-#     for i, row in enumerate(ldamodel[corpus][0]):
-#         row = sorted(row, key=lambda x: (x[1]), reverse=True)
-#         # Get the Dominant topic, Perc Contribution and Keywords for each document
-#         for j, (topic_num, prop_topic) in enumerate(row):
-#             if j == 0:  # => dominant topic
-#                 wp = ldamodel.show_topic(topic_num)
-#                 topic_keywords = ", ".join([word for word, prop in wp])
-#                 sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), prop_topic, topic_keywords]), ignore_index=True)
-#             else:
-#                 break
-#     sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
-
-#     # Add original text to the end of the output
-#     # contents = pd.Series(texts)
-#     # sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
-#     return(sent_topics_df)
-
-
-# df_topic_sents_keywords = format_topics_sentences(ldamodel=lda, corpus=corpus)
-
-# # Format
-# df_dominant_topic = df_topic_sents_keywords.reset_index()
-# df_dominant_topic.columns = ['Document_No', 'Dominant_Topic', 'Topic_Perc_Contrib', 'Keywords']
-
-# # Show
-# df_dominant_topic.head(10)
-
-
-# %%
-def format_topics_sentences(ldamodel, corpus):
-# Init output
-    sent_topics_df = pd.DataFrame()
-
-    # Get main topic in each document
-    for i, row in enumerate(ldamodel[corpus]):
-        row = sorted(row[0], key=lambda x: (x[1]), reverse=True)
-        # row = sorted(row, key=lambda x: (x[1]), reverse=True) # old line
-        # Get the Dominant topic, Perc Contribution and Keywords for each document
-        for j, (topic_num, prop_topic) in enumerate(row):
-            if j == 0: # => dominant topic
-                wp = ldamodel.show_topic(topic_num)
-                topic_keywords = ", ".join([word for word, prop in wp])
-                sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), round(prop_topic,4), topic_keywords]), ignore_index=True)
-            else:
-                break
-    sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
-
-    # Add original text to the end of the output
-    # contents = pd.Series(texts)
-    # sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
-    return(sent_topics_df)
-
-
-df_topic_sents_keywords = format_topics_sentences(ldamodel=lda, corpus=corpus)
-#df_topic_sents_keywords = format_topics_sentences(ldamodel=optimal_model, corpus=corpus, texts=data)
-
-# Format
-df_dominant_topic = df_topic_sents_keywords.reset_index()
-df_dominant_topic.columns = ['Document_No', 'Dominant_Topic', 'Topic_Perc_Contrib', 'Keywords']
-
-# Show
-# df_dominant_topic.head(10)
-
+    
 #%%
 
-new_prediction = new_prediction[0][2]
-words_concat = [[(words[id], freq) for id, freq in cp] for cp in corpus[:1]]
-words_concat = words_concat[0]
-final_prediction = []
+os.chdir('diff_commits/'+cve)
+for root, dirs, files in os.walk('committed_files'):
+    for file in files:
+        process_files(file)
+        os.chdir(current_working_directory+'/diff_commits/'+cve)
+        # with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
+        #         print(tmp_file.name)
+        #         #Open file as byte to use it with chardet
+        #         byte_tmp_file = open(os.path.join(root, file), "rb")
+        #         #Using chardet prediction to exclude not ascii or utf8 files
+        #         file_type = chardet.detect(byte_tmp_file.read())['encoding']
+        #         print(file_type)
+        #         #TODO: Remove None and type Windows-1254 (TIS-620 if this give no error)
+        #         if str(file_type) == 'utf-8' or str(file_type) == 'ascii':
+        #             output_file.write(tmp_file.read()+' ')
+        #         tmp_file.close()
+        #         byte_tmp_file.close()
 
 
-for i, elements in enumerate(words_concat):
-    final_prediction.append((elements[0], new_prediction[i][1][0][1]))
+
+
+#%%
+# output_file = open("committed_file_1_FormAuthenticationMechanism.java","r")
+# byte_tmp_file = open("committed_file_1_FormAuthenticationMechanism.java", "rb")
+# file_type = chardet.detect(byte_tmp_file.read())['encoding']
+# print(file_type)
+# os.chdir(current_working_directory)
+
+
+# %%
+# output_file_encoded = output_file.read().encode("utf-8")
+# output_file.close()
+
+
+
+# %%
+
+# nlp= spacy.load("en_core_web_sm")
+
+# # My list of stop words.
+# stop_word = open("stop_word.txt", "r")
+# stop_list = stop_word.readline().split(",")
+# # Updates spaCy's default stop words list with my additional words. 
+# nlp.Defaults.stop_words.update(stop_list)
+
+# # Iterates over the words in the stop words list and resets the "is_stop" flag.
+# for word in STOP_WORDS:
+#     lexeme = nlp.vocab[word]
+#     lexeme.is_stop = True
+
+# %%
+#REMOVING ALL SNAKE,CAMEL,DOT WORDS
+# os.chdir('diff_commits/'+cve)
+# processed_commit= utils.simpler_filter_text(str(output_file_encoded))
+# corpus_file = open(commit_sha+"_cleaned.diff","w")
+# corpus_file.write(processed_commit)
+# corpus_file.close()
+# print(processed_commit)
+# os.chdir(current_working_directory)
+
+
+
+
+
+
+
+# %%
+# doc_list = []
+# pr=nlp(str(processed_commit))
+# doc_list.append(pr)
+
+
+# %%
+# # Creates, which is a mapping of word IDs to words.
+# words = corpora.Dictionary(doc_list)
+
+# # Turns each document into a bag of words.
+# corpus = [words.doc2bow(doc) for doc in doc_list]
+
+
+# %%
+# temp_file = datapath("model")
+# lda = gensim.models.ldamodel.LdaModel.load(temp_file)
+
+# pprint(lda.print_topics(num_words=40))
+
+# # %%
+# print([[(words[id], freq) for id, freq in cp] for cp in corpus[:1]])
+
+# new_prediction= lda[corpus]
+
+# # for  topic in new_prediction:
+# #     pprint(topic)
+
+
+# #%%
+
+# new_prediction = new_prediction[0][2]
+# words_concat = [[(words[id], freq) for id, freq in cp] for cp in corpus[:1]]
+# words_concat = words_concat[0]
+# final_prediction = []
+
+
+# for i, elements in enumerate(words_concat):
+#     final_prediction.append((elements[0], new_prediction[i][1][0][1]))
     
 
-print(final_prediction)
+# print(final_prediction)
 
 # %%
