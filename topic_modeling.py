@@ -22,7 +22,7 @@ from tqdm import tqdm_notebook as tqdm
 from pprint import pprint
 from collections import defaultdict
 #%%
-cve = 'CVE-2020-10714'
+cve = 'CVE-2020-1961'
 
 
 current_working_directory = os.getcwd()

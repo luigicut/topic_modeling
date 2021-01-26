@@ -98,16 +98,36 @@ nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 
 # %%
 
+# def process_file(file_name):
+#     print("File name :"+file_name+"\n" )
+#     os.chdir('committed_files')
+#     output_file = open(file_name,"r")
+#     # os.chdir(current_working_directory)
+#     output_file_encoded = output_file.read().encode("utf-8")
+#     output_file.close()
+#     processed_file= utils.simpler_filter_text(str(output_file_encoded))
+#     corpus_file = open(file_name+"_cleaned.txt","w")
+#     corpus_file.write(processed_file)
+#     corpus_file.close()
+#     os.chdir(current_working_directory)
+#     return processed_file
+
 def process_file(file_name):
     print("File name :"+file_name+"\n" )
     os.chdir('committed_files')
     output_file = open(file_name,"r")
-    # os.chdir(current_working_directory)
-    output_file_encoded = output_file.read().encode("utf-8")
-    output_file.close()
-    processed_file= utils.simpler_filter_text(str(output_file_encoded))
     corpus_file = open(file_name+"_cleaned.txt","w")
-    corpus_file.write(processed_file)
+    for line in output_file.readlines():
+        if not line.isspace() and len(line) > 1:
+            encoded_line = line.encode("utf-8")
+            processed_line = utils.simpler_filter_text(str(encoded_line))
+            processed_line_striped = processed_line.strip() 
+            if processed_line_striped != '':
+                corpus_file.write(processed_line_striped+' ')
+    output_file.close()
+    corpus_file.close()
+    corpus_file = open(file_name+"_cleaned.txt","r")
+    processed_file = corpus_file.read()
     corpus_file.close()
     os.chdir(current_working_directory)
     return processed_file
@@ -131,7 +151,7 @@ def make_prediction(processed_file):
         final_prediction.append((elements[0], new_prediction[i][1][0][1]))
     final_prediction = sorted(final_prediction, key=lambda x: (x[1]), reverse=True)
     print(final_prediction)
-    print("\n\n\n\n") 
+    print("\n\n\n") 
 
 
     
@@ -142,24 +162,13 @@ output_file = open("joint_files.txt","a+",encoding="utf-8")
 for root, dirs, files in os.walk('committed_files'):
     for file in files:
         processed_file = process_file(file)
-        output_file.write(processed_file+' ')
+        output_file.write(processed_file)
         make_prediction(processed_file)
         os.chdir(current_working_directory+'/diff_commits/'+cve)
-        # with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
-        #         print(tmp_file.name)
-        #         #Open file as byte to use it with chardet
-        #         byte_tmp_file = open(os.path.join(root, file), "rb")
-        #         #Using chardet prediction to exclude not ascii or utf8 files
-        #         file_type = chardet.detect(byte_tmp_file.read())['encoding']
-        #         print(file_type)
-        #         #TODO: Remove None and type Windows-1254 (TIS-620 if this give no error)
-        #         if str(file_type) == 'utf-8' or str(file_type) == 'ascii':
-        #             output_file.write(tmp_file.read()+' ')
-        #         tmp_file.close()
-        #         byte_tmp_file.close()
+        
 output_file.close()
 output_file = open("joint_files.txt","r",encoding="utf-8")
-print("\n\n")
+print("\n\n\n")
 print("joint file prediction")
 make_prediction(output_file.read())
 

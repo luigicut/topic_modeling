@@ -57,6 +57,7 @@ def special_chars_split(token):
         raise TypeError('The provided token should be a str data type but is of type {}.'.format(type(token)))
 
     # result = token.split(".")
+    # String lines[] = string.split("\r?\n")
     result = re.compile("\\W").split(token)
     if len(result) == 1:
         return 
@@ -91,6 +92,8 @@ def split_funct(token, result):
             temp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text)))]
             for new_token in nlp(' '.join(temp_result)):
                 split_funct(new_token, result)
+
+# def filter_doc_simple(doc):
 
 
 def filter_doc(doc):

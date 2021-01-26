@@ -2,13 +2,14 @@
 # To add a new markdown cell, type '# %% [markdown]'
 
 # %%
-import os
+import os,sys,inspect
 import yaml
 import chardet
 import spacy
 import utils
 import gensim
 import gensim.corpora as corpora
+import fasttext
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from gensim.test.utils import common_texts
@@ -21,7 +22,7 @@ from pprint import pprint
 
 # %%
 #DEFINE THE CVE 
-cve = 'CVE-2020-10714'
+cve = 'CVE-2020-1961'
 
 
 # %%
@@ -55,8 +56,8 @@ if not os.path.isfile('project_corpus.txt'):
                 #Using chardet prediction to exclude not ascii or utf8 files
                 file_type = chardet.detect(byte_tmp_file.read())['encoding']
                 print(file_type)
-                #TODO: Remove None and type Windows-1254 (TIS-620 if this give no error)
-                if str(file_type) == 'utf-8' or str(file_type) == 'ascii':
+                #TODO: Remove None and type Windows-1254 (TIS-620, ISO-8859-1(html), if this give no error)
+                if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
                     output_file.write(tmp_file.read()+' ')
                 tmp_file.close()
                 byte_tmp_file.close()
@@ -110,7 +111,8 @@ print("finished!")
 
 # %%
 
-nlp.max_length = 6000000
+
+nlp.max_length = 12000000
 corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
 doc_list = []
 pr=nlp(str(corpus_file.read()))
@@ -130,9 +132,30 @@ lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
                                            alpha='auto',
                                            per_word_topics=True)
 
+#%%
+#pprint(lda_model.print_topics(num_words=40))
 
 #%%
 
 os.chdir(current_working_directory)
-temp_file = datapath("model")
+temp_file = datapath("model"+cve)
 lda_model.save(temp_file)
+
+#%%
+
+model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
+#%%
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+model.save_model(currentdir+"/fasttext_model/model"+cve+".bin")
+
+# %%
+model = fasttext.load_model(currentdir+"/fasttext_model/model"+cve+".bin")
+model.get_word_vector("license")
+
+# %%
+model.get_nearest_neighbors('template')
+
+
+# %%
+model.get_nearest_neighbors('injection')
+# %%
