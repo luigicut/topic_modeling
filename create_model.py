@@ -10,6 +10,7 @@ import utils
 import gensim
 import gensim.corpora as corpora
 import fasttext
+import git
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from gensim.test.utils import common_texts
@@ -18,8 +19,6 @@ from gensim.test.utils import common_texts
 from gensim.corpora.dictionary import Dictionary
 from gensim.test.utils import datapath
 from pprint import pprint
-
-
 # %%
 #DEFINE THE CVE 
 cve = 'CVE-2020-1961'
@@ -41,9 +40,21 @@ else:
 project_name=project_url.split('/')[-1]
 print(project_name)
 
-os.chdir('diff_commits/'+cve)
+
+os.chdir('diff_commits/')
+if not os.path.isdir('./'+cve):
+    print('create folder...')
+    # creates a folder using CVE name
+    os.mkdir(cve)
+    os.chdir(cve)
+else:
+    print('folder already exists')
+    os.chdir(cve)
+    print('in folder: '+os.getcwd())
+
 if not os.path.isfile('project_corpus.txt'):
     output_file = open("project_corpus.txt","a+",encoding="utf-8")
+    #git.Git().clone(project_url)
     #Check all the file from every directory from the project using os.walk excluding the following folders
     exclude_dir = set(['.git', '.vscode', '.idea'])
     for root, dirs, files in os.walk(project_name):
@@ -84,7 +95,7 @@ def lemmatizer(doc):
     # This takes in a doc of tokens from the NER and lemmatizes them. 
     # Pronouns (like "I" and "you" get lemmatized to '-PRON-', so I'm removing those.
     doc = [token.lemma_ for token in doc if token.lemma_ != '-PRON-']
-    doc = u' '.join(doc)
+    doc = ' '.join(doc)
     return nlp.make_doc(doc)
     
 def remove_stopwords(doc):
@@ -110,52 +121,48 @@ output_file.close()
 print("finished!")
 
 # %%
-
-
-nlp.max_length = 12000000
-corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
-doc_list = []
-pr=nlp(str(corpus_file.read()))
-doc_list.append(pr)
-
-# Creates, which is a mapping of word IDs to words.
-words = corpora.Dictionary(doc_list)
-
-corpus = [words.doc2bow(doc) for doc in doc_list]
-
-lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
-                                           id2word=words,
-                                           num_topics=1, 
-                                           random_state=2,
-                                           update_every=1,
-                                           passes=10,
-                                           alpha='auto',
-                                           per_word_topics=True)
-
-#%%
-#pprint(lda_model.print_topics(num_words=40))
-
-#%%
-
-os.chdir(current_working_directory)
 temp_file = datapath("model"+cve)
-lda_model.save(temp_file)
+
+if not os.path.exists(temp_file):
+    nlp.max_length = 12000000
+    corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
+    doc_list = []
+    pr=nlp(str(corpus_file.read()))
+    doc_list.append(pr)
+
+    # Creates, which is a mapping of word IDs to words.
+    words = corpora.Dictionary(doc_list)
+
+    corpus = [words.doc2bow(doc) for doc in doc_list]
+
+    lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
+                                            id2word=words,
+                                            num_topics=1, 
+                                            random_state=2,
+                                            update_every=1,
+                                            passes=10,
+                                            alpha='auto',
+                                            per_word_topics=True)
+
+    pprint(lda_model.print_topics(num_words=40))
+    lda_model.save(temp_file)   
+
 
 #%%
+os.chdir("fasttext_model/")
+if not os.path.isfile("model"+cve+".bin"):
+    print("creating fasttext model")
+    model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
+    currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    model.save_model(currentdir+"/model"+cve+".bin")
+else:
+    print("model already exist, loading.")
+    currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    model = fasttext.load_model(currentdir+"/model"+cve+".bin")
 
-model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
+
 #%%
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-model.save_model(currentdir+"/fasttext_model/model"+cve+".bin")
-
-# %%
-model = fasttext.load_model(currentdir+"/fasttext_model/model"+cve+".bin")
-model.get_word_vector("license")
-
-# %%
-model.get_nearest_neighbors('template')
-
-
-# %%
 model.get_nearest_neighbors('injection')
-# %%
+
+#%%
+os.chdir(current_working_directory)
