@@ -67,7 +67,7 @@ output_file = open("project_corpus.txt","r",encoding="utf-8")
 os.chdir(current_working_directory)
 
 # %%
-nlp= spacy.load("en_core_web_sm")
+nlp= spacy.load("en_core_web_lg")
 # My list of stop words.
 stop_word = open("stop_word.txt", "r")
 stop_list = stop_word.readline().split(",")

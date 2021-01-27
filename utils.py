@@ -1,7 +1,7 @@
 
 import spacy
 import re
-nlp= spacy.load("en_core_web_sm")
+nlp= spacy.load("en_core_web_lg")
 
 def camel_case_split(token):
     '''
@@ -58,7 +58,13 @@ def special_chars_split(token):
 
     # result = token.split(".")
     # String lines[] = string.split("\r?\n")
-    result = re.compile("\\W").split(token)
+    tmp_result = re.compile("\\W").split(token)
+    result = list()
+    for res in tmp_result:
+        if len(res.split('_')) > 1:
+            result += res.split('_')
+        else:
+            result.append(str(res))
     if len(result) == 1:
         return 
     return result
@@ -93,9 +99,6 @@ def split_funct(token, result):
             for new_token in nlp(' '.join(temp_result)):
                 split_funct(new_token, result)
 
-# def filter_doc_simple(doc):
-
-
 def filter_doc(doc):
     if type(doc) != spacy.tokens.doc.Doc:
         raise TypeError("The document should be a spacy.tokens.doc.Doc, which is created by means of nlp(")
@@ -104,38 +107,63 @@ def filter_doc(doc):
     #     print(token)
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
+    
     for token in tokens:
         tmp_result = list()
-        # split_funct(token, result)
-        if camel_case_split(token.text):
-            tmp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
-            for token in tmp_result:
-                if snake_case_split(token):
-                    tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token)))]
-                    for token in tmp_result:
-                        if special_chars_split(token):
-                            tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-                            result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
-                elif special_chars_split(token):
-                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-                    result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
+        if special_chars_split(token.text):
+            tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_one_char(special_char_token.text)]
+            for sc_token in tmp_result:
+                if camel_case_split(sc_token.text):
+                    result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(sc_token.text)))]
                 else:
-                  #check if token not contains only spaces 
-                  if string_not_spaces_or_one_char(token):
-                    result.append(str(token).lower())
-        elif snake_case_split(token.text):
-            tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
-            for token in tmp_result:
-                if special_chars_split(token):
-                    tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-                    result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
-        elif special_chars_split(token.text):
-            result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_one_char(dot_case_token.lemma_)]
-
+                    result.append(str(sc_token.lemma_).lower()) 
+        elif camel_case_split(token.text): 
+            result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
         else:
-            result.append(str(token.lemma_).lower())
+            result.append(str(token.lemma_).lower()) 
 
     return ' '.join(result)
+
+# def filter_doc(doc):
+#     if type(doc) != spacy.tokens.doc.Doc:
+#         raise TypeError("The document should be a spacy.tokens.doc.Doc, which is created by means of nlp(")
+#     # create a list of tokens where each token must pass the following checks, No punct (spacy prop), No stops (spacy prop), the token must have at least one char, the token length must major then 1  
+#     # for token in doc:
+#     #     print(token)
+#     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
+#     result = list()
+#     for token in tokens:
+#         tmp_result = list()
+#         # split_funct(token, result)
+#         if camel_case_split(token.text):
+#             tmp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
+#             for token in tmp_result:
+#                 if snake_case_split(token):
+#                     tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token)))]
+#                     for token in tmp_result:
+#                         if special_chars_split(token):
+#                             tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
+#                             result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
+#                 elif special_chars_split(token):
+#                     tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
+#                     result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
+#                 else:
+#                   #check if token not contains only spaces 
+#                   if string_not_spaces_or_one_char(token):
+#                     result.append(str(token).lower())
+#         elif snake_case_split(token.text):
+#             tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
+#             for token in tmp_result:
+#                 if special_chars_split(token):
+#                     tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
+#                     result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
+#         elif special_chars_split(token.text):
+#             result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_one_char(dot_case_token.lemma_)]
+
+#         else:
+#             result.append(str(token.lemma_).lower())
+
+#     return ' '.join(result)
 
 
 def text_into_chunks(text, chunk_size=1000):

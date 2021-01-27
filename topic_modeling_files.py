@@ -64,7 +64,7 @@ else:
 
 # %%
 
-nlp= spacy.load("en_core_web_sm")
+nlp= spacy.load("en_core_web_lg")
 # os.chdir(current_working_directory)
 # My list of stop words.
 stop_word = open("stop_word.txt", "r")
