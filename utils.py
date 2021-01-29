@@ -1,7 +1,12 @@
 
-import spacy, datetime
+import spacy, datetime, os
 import re
+from core import Git
+import random
 nlp= spacy.load("en_core_web_lg")
+GIT_CACHE = ''
+if 'GIT_CACHE' in os.environ:
+    GIT_CACHE = os.environ['GIT_CACHE']
 
 def camel_case_split(token):
     '''
@@ -194,7 +199,7 @@ def timestamp_to_timestamp_interval(timestamp, days_before, days_after):
     until = str(int((datetime.datetime.fromtimestamp(int(timestamp)) + datetime.timedelta(days=int(days_after))).timestamp()))
     return since, until
 
-def get_commit_ids_between_timestamp(since, until, git_repo=None):
+def get_commit_ids_between_timestamp(since, until, git_repo, repository_url):
     '''
     Based on git_explorer.core.get_commits()
         The order is from newest to oldest: the result[0] is the most recent one (larger timestamp), the result[-1] is the oldest (smallest timestamp)
@@ -205,13 +210,15 @@ def get_commit_ids_between_timestamp(since, until, git_repo=None):
     '''
     # if git_repo == None and repository_url ==None:
     #     raise ValueError('Provide a git_repo or a repository_url')
-    
-    if int(since) >= int(until):
+  
+    if int(float(since)) >= int(float(until)):
         raise ValueError('The timestamps provided result in an interval without commit IDs, as since >= until.')
     
-    # if git_repo == None:
-    #     git_repo = Git(repository_url, cache_path=GIT_CACHE)
-    #     git_repo.clone(skip_existing=True)
+    since = int(float(since))
+    until = int(float(until))
+    if git_repo == None:
+        git_repo = Git(repository_url, cache_path=GIT_CACHE)
+        git_repo.clone(skip_existing=True)
         
     # create git command
     cmd = ["git", "rev-list", "--all"]
@@ -230,17 +237,17 @@ def gather_candidate_commits(published_timestamp, project_url):
         since, until = timestamp_to_timestamp_interval(published_timestamp, days_before=730, days_after=100)
 
         ### Add commits before NVD release with maximum to add
-        commit_ids_to_add_before = get_commit_ids_between_timestamp(str(since), str(published_timestamp), git_repo=project_url)
+        commit_ids_to_add_before = get_commit_ids_between_timestamp(str(since), str(published_timestamp), git_repo=None, repository_url=project_url)
         if len(commit_ids_to_add_before) > 5215:
             commit_ids_to_add_before = commit_ids_to_add_before[:5215] #add the 5215 closest before the NVD release date
 
         ### Add commits after NVD release with a maximum to add
-        commit_ids_to_add_after = get_commit_ids_between_timestamp(str(published_timestamp), str(until), git_repo=project_url)
+        commit_ids_to_add_after = get_commit_ids_between_timestamp(str(published_timestamp), str(until), git_repo=None, repository_url=project_url)
         if len(commit_ids_to_add_after) > 100:
             commit_ids_to_add_after = commit_ids_to_add_after[-100:] #add the 100 closest before the NVD release date
 
         # gather candidate commits
-        print(candidate_commits = commit_ids_to_add_before + commit_ids_to_add_after)
+        print(commit_ids_to_add_before + commit_ids_to_add_after)
         #if len(candidate_commits) > 0:
         # if  candidate_commits != None and len(candidate_commits) > 0:
         #     # validate_database_coverage()
@@ -249,3 +256,14 @@ def gather_candidate_commits(published_timestamp, project_url):
         #     # candidate_commits = filter.filter_commits_on_files_changed_extensions(candidate_commits, connection, verbose=self.verbose)
         # else:
         #     print("No candidates found.")
+
+
+def reservoir_sampling(input_list, N):
+    sample = []
+    for i, line in enumerate(input_list):
+        if i < N:
+            sample.append(line)
+        elif i >= N and random.random() < N / float(i + 1):
+            replace = random.randint(0, len(sample) - 1)
+            sample[replace] = line
+    return sample
