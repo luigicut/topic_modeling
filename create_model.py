@@ -151,8 +151,10 @@ if not os.path.exists(temp_file):
 #%%
 os.chdir("fasttext_model/")
 if not os.path.isfile("model"+cve+".bin"):
+    os.chdir(current_working_directory+'/diff_commits/'+cve)
     print("creating fasttext model")
     model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
+    os.chdir("fasttext_model/")
     currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     model.save_model(currentdir+"/model"+cve+".bin")
 else:
@@ -162,7 +164,25 @@ else:
 
 
 #%%
-model.get_nearest_neighbors('injection')
+if os.path.isfile("model"+cve+".bin") and not os.path.isfile("model"+cve+".vec") :
+    lines=[]
+    # get all words from model
+    words = model.get_words()
+    with open(currentdir+"/model"+cve+".vec",'w') as file_out:
+        # the first line must contain number of total words and vector dimension
+        file_out.write(str(len(words)) + " " + str(model.get_dimension()) + "\n")
+        # line by line, you append vectors to VEC file
+        for w in words:
+            v = model.get_word_vector(w)
+            vstr = ""
+            for vi in v:
+                vstr += " " + str(vi)
+            try:
+                file_out.write(w + vstr+'\n')
+            except:
+                pass
+
 
 #%%
-os.chdir(current_working_directory)
+model.get_nearest_neighbors("injections")
+# %%

@@ -1,6 +1,7 @@
 
 import spacy, datetime, os
 import re
+import requests
 from core import Git
 import random
 nlp= spacy.load("en_core_web_lg")
@@ -234,7 +235,7 @@ def get_commit_ids_between_timestamp(since, until, git_repo, repository_url):
     return [l.strip() for l in out]
 
 def gather_candidate_commits(published_timestamp, project_url):
-        since, until = timestamp_to_timestamp_interval(published_timestamp, days_before=730, days_after=100)
+        since, until = timestamp_to_timestamp_interval(published_timestamp, days_before=183, days_after=100)
 
         ### Add commits before NVD release with maximum to add
         commit_ids_to_add_before = get_commit_ids_between_timestamp(str(since), str(published_timestamp), git_repo=None, repository_url=project_url)
@@ -257,6 +258,7 @@ def gather_candidate_commits(published_timestamp, project_url):
         # else:
         #     print("No candidates found.")
 
+        return commit_ids_to_add_before + commit_ids_to_add_after
 
 def reservoir_sampling(input_list, N):
     sample = []
@@ -267,3 +269,35 @@ def reservoir_sampling(input_list, N):
             replace = random.randint(0, len(sample) - 1)
             sample[replace] = line
     return sample
+
+
+def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
+    url = project_url+"/commit/"+commit_sha+".diff"
+    r = requests.get(url, allow_redirects=True)
+    to_create_file = open(commit_sha+'.diff', 'wb')
+    to_create_file.write(r.content)
+    to_create_file.close()
+    diff_file = open(commit_sha+'.diff', "r")
+
+    paths_list = list()
+    for line in diff_file.readlines():
+        if (line.startswith('diff --git ')): 
+            path = line.split(' b/')[1].rstrip("\n")
+            paths_list.append(path)
+    # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
+    git_repo = Git(project_url, cache_path=GIT_CACHE)
+    git_repo.clone(skip_existing=True)
+
+    for path in paths_list: 
+        file_name = path.split('/')[-1].rstrip("\n")
+        cmd = ["git", "show", commit_sha+":"+path]
+        try:
+            out = git_repo._exec.run(cmd)
+            with open("committed_files/"+file_name,"w") as f:
+                for item in out:
+                    f.write("%s\n" % item)
+                f.close()
+            print("peppe")
+        except:
+            print("Git command failed. Could not obtain commit ids.")
+            return

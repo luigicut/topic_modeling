@@ -9,3 +9,9 @@ dopo tutto il setup e le installazioni delle librerie presenti in requirements.t
 python -m spacy download en
 
 python -m spacy download en_core_web_lg
+
+# fasttext model into spacy
+
+to create a spacy word vector model starting from fasttext, be in the interested folder and put in terminal
+
+python -m spacy init-model en < new_spacy_model_name > --vectors-loc < fasttext_model >

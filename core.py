@@ -24,8 +24,8 @@ GIT_CACHE = ''
 if 'GIT_CACHE' in os.environ:
     GIT_CACHE = os.environ['GIT_CACHE']
 
-if not os.path.isdir(GIT_CACHE):
-    raise ValueError('Environment variable GIT_CACHE is not set or it points to a directory that does not exist')
+# if not os.path.isdir(GIT_CACHE):
+#     raise ValueError('Environment variable GIT_CACHE is not set or it points to a directory that does not exist')
 
 def do_clone(url, output_folder, proxy=None, shallow=False, skip_existing=False):
     git = Git(url, cache_path=output_folder, shallow=shallow)
