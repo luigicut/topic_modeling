@@ -65,13 +65,14 @@ for commit in commit_list:
         os.chdir(commit)
         os.mkdir("committed_files")
         os.mkdir("cleaned_committed_files")
+        utils.extract_files_from_diff(project_url,commit, vulnerability_id)
     else:
-        os.chdir(commit)
-    utils.extract_files_from_diff(project_url,commit, vulnerability_id)
-
-
-# commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit_sha)
-# print(commit_pred)
+        print("commit folder already exist")
+    # utils.extract_files_from_diff(project_url,commit, vulnerability_id)
+for commit in commit_list:
+    os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits/"+commit)
+    commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit)
+print(commit_pred)
 
 # %%
 # os.chdir('diff_commits/'+vulnerability_id+"/fasttext_model")

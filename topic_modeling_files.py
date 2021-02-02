@@ -106,7 +106,10 @@ def process_file(file_name):
     print("File name :"+file_name+"\n" )
     os.chdir('committed_files')
     output_file = open(file_name,"r")
-    corpus_file = open(file_name+"_cleaned.txt","w")
+    #TODO: QUA CI DOBBIAMO SPOSTARE NEL CLEANED COMMITTED FILE
+    os.chdir("../cleaned_committed_files")
+    print(os.getcwd())
+    corpus_file = open("cleaned_committed_files"+file_name,"w")
     for line in output_file.readlines():
         if not line.isspace() and len(line) > 1:
             encoded_line = line.encode("utf-8")
@@ -116,10 +119,12 @@ def process_file(file_name):
                 corpus_file.write(processed_line_striped+' ')
     output_file.close()
     corpus_file.close()
-    corpus_file = open(file_name+"_cleaned.txt","r")
+    corpus_file = open("cleaned_committed_files"+file_name,"r")
     processed_file = corpus_file.read()
     corpus_file.close()
-    os.chdir(current_working_directory)
+    #TODO: QUA DOBBIAMO TORNARE NELLA CARTELLA SHA DEL COMMIT
+    os.chdir("..")
+    print(os.getcwd())
     return processed_file
 
 def make_prediction(vulnerability_id, processed_file):
@@ -148,17 +153,18 @@ def make_prediction(vulnerability_id, processed_file):
 #%%
 def make_joint_prediction(vulnerability_id, project_url, commit_sha):
 
-    os.chdir('diff_commits/'+vulnerability_id)
-    output_file = open("joint_files.txt","a+",encoding="utf-8")
+    # os.chdir('diff_commits/'+vulnerability_id)
+    print(os.getcwd())
+    output_file = open("joint_corpus_"+commit_sha+".txt","a+",encoding="utf-8")
     for root, dirs, files in os.walk('committed_files'):
         for file in files:
             processed_file = process_file(file)
             output_file.write(processed_file)
             make_prediction(vulnerability_id, processed_file)
-            os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
+            # os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
             
     output_file.close()
-    output_file = open("joint_files.txt","r",encoding="utf-8")
+    output_file = open("joint_corpus_"+commit_sha+".txt","r",encoding="utf-8")
     print("\n\n\n")
     print("joint file prediction")
     joint_file_prediction = make_prediction(vulnerability_id, output_file.read())

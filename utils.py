@@ -4,6 +4,7 @@ import re
 import requests
 from core import Git
 import random
+import chardet
 nlp= spacy.load("en_core_web_lg")
 GIT_CACHE = ''
 if 'GIT_CACHE' in os.environ:
@@ -274,20 +275,26 @@ def reservoir_sampling(input_list, N):
 def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
     url = project_url+"/commit/"+commit_sha+".diff"
     r = requests.get(url, allow_redirects=True)
+    print("prima di scrivere il diff")
     to_create_file = open(commit_sha+'.diff', 'wb')
     to_create_file.write(r.content)
     to_create_file.close()
-    diff_file = open(commit_sha+'.diff', "r")
+    diff_file = open(commit_sha+'.diff', "r", encoding="utf8")
 
+    byte_tmp_file = open(commit_sha+'.diff', "rb")
+    file_type = chardet.detect(byte_tmp_file.read())['encoding']
+    print("prima di leggere il diff \n "+str(file_type))   
     paths_list = list()
-    for line in diff_file.readlines():
-        if (line.startswith('diff --git ')): 
-            path = line.split(' b/')[1].rstrip("\n")
-            paths_list.append(path)
-    # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
-    git_repo = Git(project_url, cache_path=GIT_CACHE)
-    git_repo.clone(skip_existing=True)
+    if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
+        for line in diff_file.readlines():
+            if (line.startswith('diff --git ')): 
+                path = line.split(' b/')[1].rstrip("\n")
+                paths_list.append(path)
+        # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
+        git_repo = Git(project_url, cache_path=GIT_CACHE)
+        git_repo.clone(skip_existing=True)
 
+    print("prima di creare il file committato")
     for path in paths_list: 
         file_name = path.split('/')[-1].rstrip("\n")
         cmd = ["git", "show", commit_sha+":"+path]
@@ -297,7 +304,6 @@ def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
                 for item in out:
                     f.write("%s\n" % item)
                 f.close()
-            print("peppe")
         except:
             print("Git command failed. Could not obtain commit ids.")
             return
