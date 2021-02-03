@@ -1,10 +1,11 @@
-
 import spacy, datetime, os
 import re
 import requests
 from core import Git
 import random
 import chardet
+from shutil import rmtree
+
 nlp= spacy.load("en_core_web_lg")
 GIT_CACHE = ''
 if 'GIT_CACHE' in os.environ:
@@ -275,7 +276,6 @@ def reservoir_sampling(input_list, N):
 def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
     url = project_url+"/commit/"+commit_sha+".diff"
     r = requests.get(url, allow_redirects=True)
-    print("prima di scrivere il diff")
     to_create_file = open(commit_sha+'.diff', 'wb')
     to_create_file.write(r.content)
     to_create_file.close()
@@ -283,7 +283,6 @@ def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
 
     byte_tmp_file = open(commit_sha+'.diff', "rb")
     file_type = chardet.detect(byte_tmp_file.read())['encoding']
-    print("prima di leggere il diff \n "+str(file_type))   
     paths_list = list()
     if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
         for line in diff_file.readlines():
@@ -294,16 +293,53 @@ def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
         git_repo = Git(project_url, cache_path=GIT_CACHE)
         git_repo.clone(skip_existing=True)
 
-    print("prima di creare il file committato")
     for path in paths_list: 
         file_name = path.split('/')[-1].rstrip("\n")
-        cmd = ["git", "show", commit_sha+":"+path]
-        try:
-            out = git_repo._exec.run(cmd)
-            with open("committed_files/"+file_name,"w") as f:
-                for item in out:
-                    f.write("%s\n" % item)
-                f.close()
-        except:
-            print("Git command failed. Could not obtain commit ids.")
-            return
+        file_type = file_name.split('.')[-1]
+        if file_type == 'java':
+            cmd = ["git", "show", commit_sha+":"+path]
+            try:
+                out = git_repo._exec.run(cmd)
+                with open("committed_files/"+file_name,"w") as f:
+                    for item in out:
+                        f.write("%s\n" % item)
+                    f.close()
+            except:
+                print("Git command failed. Could not obtain commit ids.")
+                return
+
+def folder_cleaner(commit, candidate_commits_path):
+    os.chdir("..")
+    if len(os.listdir(candidate_commits_path+"/"+commit+"/committed_files")) == 0 :
+        rmtree(commit, ignore_errors=True)
+
+
+
+# def license_remove(file):
+
+
+def license_remove(txt, delim=('/*', '*/')):
+    'Strips first nest of block comments'
+ 
+    deliml, delimr = delim
+    out = ''
+    if deliml in txt:
+        indx = txt.index(deliml)
+        out += txt[:indx]
+        txt = txt[indx+len(deliml):]
+        # txt = _commentstripper(txt, delim)
+        assert delimr in txt, 'Cannot find closing comment delimiter in ' + txt
+        indx = txt.index(delimr)
+        out += txt[(indx+len(delimr)):]
+    else:
+        out = txt
+    return out
+ 
+
+# def commentstripper(txt, delim=('/*', '*/')):
+#     'Strips nests of block comments'
+ 
+#     deliml, delimr = delim
+#     while deliml in txt:
+#         txt = _commentstripper(txt, delim)
+#     return txt

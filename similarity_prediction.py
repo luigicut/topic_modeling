@@ -52,6 +52,7 @@ if not os.path.isdir('./candidate_commits'):
 else:
     print('folder already exists')
 os.chdir(current_working_directory)
+candidate_commits_path = current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits"
 
 #%%
 #RETRIVING THE COMMIT LIST
@@ -59,20 +60,27 @@ commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
 print(commit_list)
 #CREATING A FOLDER FOR EACH COMMIT 
 for commit in commit_list:
-    os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits")
+    os.chdir(candidate_commits_path)
     if not os.path.isdir(commit):
         os.mkdir(commit)
         os.chdir(commit)
         os.mkdir("committed_files")
         os.mkdir("cleaned_committed_files")
         utils.extract_files_from_diff(project_url,commit, vulnerability_id)
+        utils.folder_cleaner(commit, candidate_commits_path)
     else:
         print("commit folder already exist")
     # utils.extract_files_from_diff(project_url,commit, vulnerability_id)
+
 for commit in commit_list:
-    os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits/"+commit)
-    commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit)
-print(commit_pred)
+    if os.path.exists(commit):
+        print(commit)
+        os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits/"+commit)
+        commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit)
+        prediction_joint_file = open("prediction_joint_corpus_"+commit+".txt","w")
+        for item in commit_pred:
+            prediction_joint_file.writelines(str(item)+"\n")
+        prediction_joint_file.close()
 
 # %%
 # os.chdir('diff_commits/'+vulnerability_id+"/fasttext_model")
