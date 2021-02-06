@@ -11,12 +11,20 @@ import utils
 
 #%%
 def get_commit_list(vulnerability_id, project_url):
-    nist_nvd_request_url = "https://services.nvd.nist.gov/rest/json/cve/1.0/"
+    # nist_nvd_request_url = "https://services.nvd.nist.gov/rest/json/cve/1.0/"
 
-    r = requests.get(nist_nvd_request_url+vulnerability_id)
-    assert r.ok == True, "vulnerability ID {} is not in the NVD".format(vulnerability_id)
-    cve_content = r.json()
-    timestamp_from_json = cve_content['result']['CVE_Items'][0]['publishedDate'].split('T')[0]
+    # r = requests.get(nist_nvd_request_url+vulnerability_id)
+    # assert r.ok == True, "vulnerability ID {} is not in the NVD".format(vulnerability_id)
+    # cve_content = r.json()
+    # timestamp_from_json = cve_content['result']['CVE_Items'][0]['publishedDate'].split('T')[0]
+    timestamp_from_json = ''
+    cve_year = vulnerability_id.split("-")[1]
+    with open("CVE_list/nvdcve-1.1-"+cve_year+".json", encoding="utf8") as raw:
+        data = json.load(raw)
+    for i in range(len(data['CVE_Items'])):
+        json_item = data['CVE_Items'][i]
+        if json_item['cve']['CVE_data_meta']['ID'] == vulnerability_id:
+          timestamp_from_json = json_item['publishedDate'].split('T')[0]  
     date = datetime.strptime(timestamp_from_json, '%Y-%m-%d')
     timestamp = str((date - datetime(1970, 1, 1)).total_seconds()*1000)
     published_timestamp = time.mktime(datetime.fromtimestamp(int(timestamp[:-2])/1000.0).timetuple())

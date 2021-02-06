@@ -1,7 +1,7 @@
 import spacy, datetime, os
 import re
 import requests
-from core import Git
+from core import Git, Commit
 import random
 import chardet
 from shutil import rmtree
@@ -224,7 +224,7 @@ def get_commit_ids_between_timestamp(since, until, git_repo, repository_url):
         git_repo.clone(skip_existing=True)
         
     # create git command
-    cmd = ["git", "rev-list", "--all"]
+    cmd = ["git", "rev-list", "--all", "--remotes"]
     cmd.append("--since=" + str(since))
     cmd.append("--until=" + str(until))
     
@@ -250,7 +250,7 @@ def gather_candidate_commits(published_timestamp, project_url):
             commit_ids_to_add_after = commit_ids_to_add_after[-100:] #add the 100 closest before the NVD release date
 
         # gather candidate commits
-        print(commit_ids_to_add_before + commit_ids_to_add_after)
+        # print(commit_ids_to_add_before + commit_ids_to_add_after)
         #if len(candidate_commits) > 0:
         # if  candidate_commits != None and len(candidate_commits) > 0:
         #     # validate_database_coverage()
@@ -274,24 +274,43 @@ def reservoir_sampling(input_list, N):
 
 
 def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
-    url = project_url+"/commit/"+commit_sha+".diff"
-    r = requests.get(url, allow_redirects=True)
-    to_create_file = open(commit_sha+'.diff', 'wb')
-    to_create_file.write(r.content)
+    # url = project_url+"/commit/"+commit_sha+".diff"
+    # r = requests.get(url, allow_redirects=True)
+    git_repo = Git(project_url, cache_path=GIT_CACHE)
+    git_repo.clone(skip_existing=True)
+
+    commit = Commit(git_repo, commit_sha)
+
+    diff = commit._exec.run(['git', 'diff', commit._id + "^.." + commit._id])
+
+    to_create_file = open(commit_sha+'.diff', 'wb',)
+    for item in diff:
+        to_create_file.write(("%s\n" % item).encode('utf8'))
+    # f.close()
+    # to_create_file.write(diff)
     to_create_file.close()
-    diff_file = open(commit_sha+'.diff', "r", encoding="utf8")
+    # diff_file = open(commit_sha+'.diff', "r", encoding="utf8")
 
     byte_tmp_file = open(commit_sha+'.diff', "rb")
     file_type = chardet.detect(byte_tmp_file.read())['encoding']
     paths_list = list()
     if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
-        for line in diff_file.readlines():
-            if (line.startswith('diff --git ')): 
-                path = line.split(' b/')[1].rstrip("\n")
-                paths_list.append(path)
+        with open(commit_sha+'.diff', "r", encoding="utf8") as diff_file:
+            lines = diff_file.readlines()
+            for i in range(0, len(lines)):
+                if (lines[i].startswith('diff --git ')):
+                    if not lines[i+1].startswith('deleted'):
+                        path = lines[i].split(' b/')[1].rstrip("\n")
+                        paths_list.append(path)
+            
+        # for line in diff_file.readlines():
+        #     if (line.startswith('diff --git ')): 
+
+        #         path = line.split(' b/')[1].rstrip("\n")
+        #         paths_list.append(path)
         # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
-        git_repo = Git(project_url, cache_path=GIT_CACHE)
-        git_repo.clone(skip_existing=True)
+        # git_repo = Git(project_url, cache_path=GIT_CACHE)
+        # git_repo.clone(skip_existing=True)
 
     for path in paths_list: 
         file_name = path.split('/')[-1].rstrip("\n")
