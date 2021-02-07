@@ -30,6 +30,7 @@ import spacy
 import utils
 import gather_commits
 import topic_modeling_files
+from tqdm import tqdm_notebook as tqdm
 
 # %%
 LDA_WORDS_NUMBER = 50
@@ -54,29 +55,27 @@ print(len(commit_list))
 #%%
 # commit_list = ['e07263dedad7ed44e188abb11260fa3061afadc4']
 #CREATING A FOLDER FOR EACH COMMIT 
-for commit in commit_list:
+for commit in tqdm(commit_list):
     os.chdir(candidate_commits_path)
-    # TODO: REMOVE IF
-    if commit == "e07263dedad7ed44e188abb11260fa3061afadc4":
-      if not os.path.isdir(commit):
-          os.mkdir(commit)
-          os.chdir(commit)
-          os.mkdir("committed_files")
-          os.mkdir("cleaned_committed_files")
-          utils.extract_files_from_diff(project_url,commit, vulnerability_id)
-          utils.folder_cleaner(commit, candidate_commits_path)
-          if os.path.exists(commit):
-            print("processing commit : "+commit)
-            os.chdir(candidate_commits_path+"/"+commit)
-            commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit)
-            prediction_joint_file = open("prediction_joint_corpus_"+commit+".txt","w")
-            for item in commit_pred:
-                prediction_joint_file.writelines(str(item)+"\n")
-            prediction_joint_file.close()
-            endTime = datetime.now()
-            print('finished at: '+str(endTime))
-      else:
-          print("commit folder already exist")
+    if not os.path.isdir(commit):
+        os.mkdir(commit)
+        os.chdir(commit)
+        os.mkdir("committed_files")
+        os.mkdir("cleaned_committed_files")
+        utils.extract_files_from_diff(project_url,commit, vulnerability_id)
+        utils.folder_cleaner(commit, candidate_commits_path)
+        if os.path.exists(commit):
+          print("processing commit : "+commit)
+          os.chdir(candidate_commits_path+"/"+commit)
+          commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit)
+          prediction_joint_file = open("prediction_joint_corpus_"+commit+".txt","w")
+          for item in commit_pred:
+              prediction_joint_file.writelines(str(item)+"\n")
+          prediction_joint_file.close()
+          # endTime = datetime.now()
+          # print('finished at: '+str(endTime))
+    else:
+        print("commit folder already exist")
     # utils.extract_files_from_diff(project_url,commit, vulnerability_id)
     
 # os.chdir(candidate_commits_path)

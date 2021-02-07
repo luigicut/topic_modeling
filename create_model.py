@@ -179,5 +179,5 @@ if os.path.isfile("model"+cve+".bin") and not os.path.isfile("model"+cve+".vec")
 
 
 #%%
-model.get_nearest_neighbors("injections")
+# model.get_nearest_neighbors("injections")
 # %%

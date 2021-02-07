@@ -48,53 +48,6 @@ def remove_stopwords(doc):
 nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
 nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 
-#%%
-
-# statments_yaml = open("statements/"+vulnerability_id+"/statement.yaml",'r')
-# parsed_statments =  yaml.load(statments_yaml, Loader=yaml.FullLoader)
-# project_url = ''
-# commit_sha = ''
-
-# if  'fixes' in parsed_statments:
-#     project_url = parsed_statments['fixes'][0]['commits'][0]['repository']
-#     commit_sha = parsed_statments['fixes'][0]['commits'][0]['id']
-# else:
-#     raise SystemExit("please provide project URL and fix commit SHA and restart")
-
-# %%
-
-# nlp= spacy.load("en_core_web_lg")
-# # os.chdir(current_working_directory)
-# # My list of stop words.
-# stop_word = open("stop_word.txt", "r")
-# stop_list = stop_word.readline().split(",")
-# # Updates spaCy's default stop words list with my additional words. 
-# nlp.Defaults.stop_words.update(stop_list)
-
-# # Iterates over the words in the stop words list and resets the "is_stop" flag.
-# for word in STOP_WORDS:
-#     lexeme = nlp.vocab[word]
-#     lexeme.is_stop = True
-
-#%%
-# def lemmatizer(doc):
-#     # This takes in a doc of tokens from the NER and lemmatizes them. 
-#     # Pronouns (like "I" and "you" get lemmatized to '-PRON-', so I'm removing those.
-#     doc = [token.lemma_ for token in doc if token.lemma_ != '-PRON-']
-#     doc = u' '.join(doc)
-#     return nlp.make_doc(doc)
-    
-# def remove_stopwords(doc):
-#     # This will remove stopwords and punctuation.
-#     # Use token.text to return strings, which we'll need for Gensim.
-#     doc = [token.text for token in doc if token.is_stop != True and token.is_punct != True]
-#     return doc
-
-# # The add_pipe function appends our functions to the default pipeline.
-# nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
-# nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
-
-
 # %%
 
 def process_file(file_name):
@@ -123,11 +76,11 @@ def process_file(file_name):
     #         if processed_line_striped != '':
     #             corpus_file.write(processed_line_striped+' ')
 
-    # READ THE WHOLE TEXT REMOVING ALL OCCURENCES OF \n
+    # READ THE WHOLE TEXT
     processed_corpus = utils.simpler_filter_text(str(output_file.read()))
     corpus_file.write(processed_corpus+' ')
 
-    
+
     output_file.close()
     corpus_file.close()
     corpus_file = open("cleaned_"+file_name+".txt","r")

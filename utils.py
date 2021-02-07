@@ -135,47 +135,6 @@ def filter_doc(doc):
 
     return ' '.join(result)
 
-# def filter_doc(doc):
-#     if type(doc) != spacy.tokens.doc.Doc:
-#         raise TypeError("The document should be a spacy.tokens.doc.Doc, which is created by means of nlp(")
-#     # create a list of tokens where each token must pass the following checks, No punct (spacy prop), No stops (spacy prop), the token must have at least one char, the token length must major then 1  
-#     # for token in doc:
-#     #     print(token)
-#     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
-#     result = list()
-#     for token in tokens:
-#         tmp_result = list()
-#         # split_funct(token, result)
-#         if camel_case_split(token.text):
-#             tmp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
-#             for token in tmp_result:
-#                 if snake_case_split(token):
-#                     tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token)))]
-#                     for token in tmp_result:
-#                         if special_chars_split(token):
-#                             tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-#                             result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
-#                 elif special_chars_split(token):
-#                     tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-#                     result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
-#                 else:
-#                   #check if token not contains only spaces 
-#                   if string_not_spaces_or_one_char(token):
-#                     result.append(str(token).lower())
-#         elif snake_case_split(token.text):
-#             tmp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
-#             for token in tmp_result:
-#                 if special_chars_split(token):
-#                     tmp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token)))]
-#                     result += [res for res in tmp_result if string_not_spaces_or_one_char(res)]
-#         elif special_chars_split(token.text):
-#             result += [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_one_char(dot_case_token.lemma_)]
-
-#         else:
-#             result.append(str(token.lemma_).lower())
-
-#     return ' '.join(result)
-
 
 def text_into_chunks(text, chunk_size=1000):
     '''
@@ -252,17 +211,6 @@ def gather_candidate_commits(published_timestamp, project_url):
         if len(commit_ids_to_add_after) > 100:
             commit_ids_to_add_after = commit_ids_to_add_after[-100:] #add the 100 closest before the NVD release date
 
-        # gather candidate commits
-        # print(commit_ids_to_add_before + commit_ids_to_add_after)
-        #if len(candidate_commits) > 0:
-        # if  candidate_commits != None and len(candidate_commits) > 0:
-        #     # validate_database_coverage()
-        #     print("CANDIDATE commits in gather candidate commit rank.py")
-        #     print("self candidate commit :", candidate_commits)
-        #     # candidate_commits = filter.filter_commits_on_files_changed_extensions(candidate_commits, connection, verbose=self.verbose)
-        # else:
-        #     print("No candidates found.")
-
         return commit_ids_to_add_before + commit_ids_to_add_after
 
 def reservoir_sampling(input_list, N):
@@ -277,8 +225,7 @@ def reservoir_sampling(input_list, N):
 
 
 def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
-    # url = project_url+"/commit/"+commit_sha+".diff"
-    # r = requests.get(url, allow_redirects=True)
+
     git_repo = Git(project_url, cache_path=GIT_CACHE)
     git_repo.clone(skip_existing=True)
 
@@ -289,10 +236,8 @@ def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
     to_create_file = open(commit_sha+'.diff', 'wb',)
     for item in diff:
         to_create_file.write(("%s\n" % item).encode('utf8'))
-    # f.close()
-    # to_create_file.write(diff)
+
     to_create_file.close()
-    # diff_file = open(commit_sha+'.diff', "r", encoding="utf8")
 
     byte_tmp_file = open(commit_sha+'.diff', "rb")
     file_type = chardet.detect(byte_tmp_file.read())['encoding']
@@ -306,14 +251,6 @@ def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
                         path = lines[i].split(' b/')[1].rstrip("\n")
                         paths_list.append(path)
             
-        # for line in diff_file.readlines():
-        #     if (line.startswith('diff --git ')): 
-
-        #         path = line.split(' b/')[1].rstrip("\n")
-        #         paths_list.append(path)
-        # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
-        # git_repo = Git(project_url, cache_path=GIT_CACHE)
-        # git_repo.clone(skip_existing=True)
 
     for path in paths_list: 
         file_name = path.split('/')[-1].rstrip("\n")
@@ -336,10 +273,6 @@ def folder_cleaner(commit, candidate_commits_path):
         rmtree(commit, ignore_errors=True)
 
 
-
-# def license_remove(file):
-
-
 def license_remove(txt, delim=('/*', '*/')):
     'Strips first nest of block comments'
  
@@ -349,19 +282,9 @@ def license_remove(txt, delim=('/*', '*/')):
         indx = txt.index(deliml)
         out += txt[:indx]
         txt = txt[indx+len(deliml):]
-        # txt = _commentstripper(txt, delim)
         assert delimr in txt, 'Cannot find closing comment delimiter in ' + txt
         indx = txt.index(delimr)
         out += txt[(indx+len(delimr)):]
     else:
         out = txt
     return out
- 
-
-# def commentstripper(txt, delim=('/*', '*/')):
-#     'Strips nests of block comments'
- 
-#     deliml, delimr = delim
-#     while deliml in txt:
-#         txt = _commentstripper(txt, delim)
-#     return txt
