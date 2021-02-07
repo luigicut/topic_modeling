@@ -1,6 +1,6 @@
 #%% 
 
-file_to_order = open("commits_similarity_file_fasttext.txt","r")
+file_to_order = open("commits_similarity_file.txt","r")
 list_to_order = list()
 for lines in file_to_order.readlines():
     sha, value = lines.split(",")

@@ -1,32 +1,27 @@
 # To add a new cell, type '# %%'
 # To add a new markdown cell, type '# %% [markdown]'
 # %%
-import numpy as np
-import pandas as pd
-import re
+
 import os
-import requests
-import yaml
 import gensim
 import gensim.corpora as corpora
-import en_core_web_lg
 import spacy
 import utils
-import chardet
 
-from gensim.utils import simple_preprocess
-from gensim.models import CoherenceModel
 from gensim.test.utils import datapath
-from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en.stop_words import STOP_WORDS
-from tqdm import tqdm_notebook as tqdm
-from pprint import pprint
-from collections import defaultdict
 #%%
+project_url = ''
+if 'PROJECT_URL' in os.environ:
+    project_url = os.environ['PROJECT_URL']
+project_name = project_url.split('/')[-1]
+
 nlp= spacy.load("en_core_web_lg")
 current_working_directory = os.getcwd()
 stop_word = open("stop_word.txt", "r")
 stop_list = stop_word.readline().split(",")
+# Add project name sto stopwords
+stop_list.append(project_name)
 # Updates spaCy's default stop words list with my additional words. 
 nlp.Defaults.stop_words.update(stop_list)
 
@@ -119,13 +114,20 @@ def process_file(file_name):
     corpus_file = open("cleaned_"+file_name+".txt","w")
     #TODO: QUA METTIAMO LA UTILS REMOVE LICENSE E GLI PASSIAMO OUTPUT_FILE SE LO LEGGE TUTTO E NE RIMUOVE LA LICENZA, RESTITUENDO IL FILE PULITO
     
-    for line in output_file.readlines():
-        if not line.isspace() and len(line) > 1:
-            encoded_line = line.encode("utf-8")
-            processed_line = utils.simpler_filter_text(str(encoded_line))
-            processed_line_striped = processed_line.strip() 
-            if processed_line_striped != '':
-                corpus_file.write(processed_line_striped+' ')
+    # READ EACH LINE OF TEXT
+    # for line in output_file.readlines():
+    #     if not line.isspace() and len(line) > 1:
+    #         encoded_line = line.encode("utf-8")
+    #         processed_line = utils.simpler_filter_text(str(encoded_line))
+    #         processed_line_striped = processed_line.strip() 
+    #         if processed_line_striped != '':
+    #             corpus_file.write(processed_line_striped+' ')
+
+    # READ THE WHOLE TEXT REMOVING ALL OCCURENCES OF \n
+    processed_corpus = utils.simpler_filter_text(str(output_file.read()))
+    corpus_file.write(processed_corpus+' ')
+
+    
     output_file.close()
     corpus_file.close()
     corpus_file = open("cleaned_"+file_name+".txt","r")
@@ -167,7 +169,8 @@ def make_joint_prediction(vulnerability_id, project_url, commit_sha):
             for file in files:
                 processed_file = process_file(file)
                 output_file.write(processed_file)
-                make_prediction(vulnerability_id, processed_file)
+                #IMPORTANT: remove make_prediction for single file, considering that we use only joint file prediction
+                # make_prediction(vulnerability_id, processed_file)
                 # os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
         output_file.close()
     

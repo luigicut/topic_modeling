@@ -1,6 +1,5 @@
 import spacy, datetime, os
 import re
-import requests
 from core import Git, Commit
 import random
 import chardet
@@ -81,6 +80,9 @@ def special_chars_split(token):
 def string_not_spaces_or_one_char(s):
     return not s.isspace() and len(s) > 1
 
+def string_not_spaces_or_three_char(s):
+    return not s.isspace() and len(s) > 3
+
 def str_not_special_upper(s):
     '''
     Checks if a string contains special characters and if contains at least one uppercase letter
@@ -90,7 +92,7 @@ def str_not_special_upper(s):
 
 def split_funct(token, result):
     if str_not_special_upper(token.lemma_):
-      if string_not_spaces_or_one_char(token.lemma_):
+      if string_not_spaces_or_three_char(token.lemma_):
         result.append(str(token.lemma_).lower())
       return
     else:
@@ -119,16 +121,17 @@ def filter_doc(doc):
     for token in tokens:
         tmp_result = list()
         if special_chars_split(token.text):
-            tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_one_char(special_char_token.lemma_)]
+            tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_three_char(special_char_token.lemma_)]
             for sc_token in tmp_result:
                 if camel_case_split(sc_token.text):
-                    result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(sc_token.text))) if string_not_spaces_or_one_char(camel_case_token.lemma_)]
+                    result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(sc_token.text))) if string_not_spaces_or_three_char(camel_case_token.lemma_)]
                 else:
                     result.append(str(sc_token.lemma_).lower()) 
         elif camel_case_split(token.text): 
-            result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))  if string_not_spaces_or_one_char(camel_case_token.lemma_)]
+            result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))  if string_not_spaces_or_three_char(camel_case_token.lemma_)]
         else:
-            result.append(str(token.lemma_).lower()) 
+            if string_not_spaces_or_three_char(token.lemma_):
+                result.append(str(token.lemma_).lower()) 
 
     return ' '.join(result)
 

@@ -1,6 +1,5 @@
 #%% 
 import os, requests, json
-import yaml
 import time
 from datetime import datetime
 
@@ -37,7 +36,7 @@ def get_commit_list(vulnerability_id, project_url):
     # else:
     #     raise SystemExit("please provide project name")
     
-    os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
+    # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
     commit_list = utils.gather_candidate_commits(published_timestamp, project_url)
 
     return commit_list

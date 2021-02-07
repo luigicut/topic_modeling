@@ -10,13 +10,8 @@ import utils
 import gensim
 import gensim.corpora as corpora
 import fasttext
-import git
 
 from spacy.lang.en.stop_words import STOP_WORDS
-from gensim.test.utils import common_texts
-from gensim.corpora.dictionary import Dictionary
-from gensim.test.utils import common_texts
-from gensim.corpora.dictionary import Dictionary
 from gensim.test.utils import datapath
 from pprint import pprint
 # %%

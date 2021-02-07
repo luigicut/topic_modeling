@@ -1,27 +1,11 @@
 # To add a new cell, type '# %%'
 # To add a new markdown cell, type '# %% [markdown]'
 # %%
-import numpy as np
-import pandas as pd
-import re
+
 import os
-import requests
-import yaml
-import gensim
-import gensim.corpora as corpora
-import en_core_web_lg
-import spacy
 import json
 import utils
 
-from gensim.utils import simple_preprocess
-from gensim.models import CoherenceModel
-from gensim.test.utils import datapath
-from spacy.lemmatizer import Lemmatizer
-from spacy.lang.en.stop_words import STOP_WORDS
-from tqdm import tqdm_notebook as tqdm
-from pprint import pprint
-from collections import defaultdict
 #%%
 
 current_working_directory = os.getcwd()

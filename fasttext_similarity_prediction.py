@@ -2,7 +2,8 @@
 import os
 vulnerability_id = 'CVE-2020-1961'
 current_working_directory = os.getcwd()
-os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
+# os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
+os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 from scipy import spatial
 import fasttext
 import gather_commits
