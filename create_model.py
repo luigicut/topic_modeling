@@ -12,18 +12,19 @@ import gensim.corpora as corpora
 import fasttext
 
 from spacy.lang.en.stop_words import STOP_WORDS
-from gensim.test.utils import datapath
 from pprint import pprint
 # %%
 #DEFINE THE CVE 
-cve = 'CVE-2020-1961'
+vulnerability_id = 'CVE-2020-10714'
 
 
 # %%
 
 #Retrieve project url associated to CVE in the relative yaml file
 current_working_directory = os.getcwd()
-statments_yaml = open("statements/"+cve+"/statement.yaml",'r')
+os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
+GIT_CACHE = os.environ['GIT_CACHE']
+statments_yaml = open("statements/"+vulnerability_id+"/statement.yaml",'r')
 parsed_statments =  yaml.load(statments_yaml, Loader=yaml.FullLoader)
 project_url = ''
 
@@ -37,14 +38,14 @@ print(project_name)
 
 
 os.chdir('diff_commits/')
-if not os.path.isdir('./'+cve):
+if not os.path.isdir('./'+vulnerability_id):
     print('create folder...')
     # creates a folder using CVE name
-    os.mkdir(cve)
-    os.chdir(cve)
+    os.mkdir(vulnerability_id)
+    os.chdir(vulnerability_id)
 else:
     print('folder already exists')
-    os.chdir(cve)
+    os.chdir(vulnerability_id)
     print('in folder: '+os.getcwd())
 
 if not os.path.isfile('project_corpus.txt'):
@@ -52,7 +53,7 @@ if not os.path.isfile('project_corpus.txt'):
     #git.Git().clone(project_url)
     #Check all the file from every directory from the project using os.walk excluding the following folders
     exclude_dir = set(['.git', '.vscode', '.idea'])
-    for root, dirs, files in os.walk(project_name):
+    for root, dirs, files in os.walk(GIT_CACHE+"/"+project_name):
         dirs[:] = [d for d in dirs if d not in exclude_dir]
         for file in files:
             with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
@@ -79,6 +80,8 @@ stop_word = open("stop_word.txt", "r")
 stop_list = stop_word.readline().split(",")
 # Updates spaCy's default stop words list with my additional words. 
 nlp.Defaults.stop_words.update(stop_list)
+# Add project name sto stopwords
+stop_list.append(project_name)
 
 # Iterates over the words in the stop words list and resets the "is_stop" flag.
 for word in STOP_WORDS:
@@ -106,7 +109,7 @@ nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 
 # %%
 #REMOVING ALL SNAKE,CAMEL,DOT WORDS
-os.chdir('diff_commits/'+cve)
+os.chdir('diff_commits/'+vulnerability_id)
 if not os.path.isfile('project_corpus_cleaned.txt'):
     processed_corpus= utils.simpler_filter_text(str(output_file.read()))
     corpus_file = open("project_corpus_cleaned.txt","w",encoding="utf-8")
@@ -116,7 +119,7 @@ output_file.close()
 print("finished!")
 
 # %%
-temp_file = datapath("model"+cve)
+temp_file ="model_"+vulnerability_id
 
 if not os.path.exists(temp_file):
     nlp.max_length = 12000000
@@ -140,30 +143,30 @@ if not os.path.exists(temp_file):
                                             per_word_topics=True)
 
     pprint(lda_model.print_topics(num_words=40))
-    lda_model.save(temp_file)   
+    lda_model.save(current_working_directory+'/diff_commits/'+vulnerability_id+"/gensim_model/"+temp_file)   
 
 
 #%%
 os.chdir("fasttext_model/")
-if not os.path.isfile("model"+cve+".bin"):
-    os.chdir(current_working_directory+'/diff_commits/'+cve)
+if not os.path.isfile("model_"+vulnerability_id+".bin"):
+    os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
     print("creating fasttext model")
     model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
     os.chdir("fasttext_model/")
     currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    model.save_model(currentdir+"/model"+cve+".bin")
+    model.save_model(currentdir+"/model_"+vulnerability_id+".bin")
 else:
     print("model already exist, loading.")
     currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    model = fasttext.load_model(currentdir+"/model"+cve+".bin")
+    model = fasttext.load_model(currentdir+"/model_"+vulnerability_id+".bin")
 
 
 #%%
-if os.path.isfile("model"+cve+".bin") and not os.path.isfile("model"+cve+".vec") :
+if os.path.isfile("model_"+vulnerability_id+".bin") and not os.path.isfile("model_"+vulnerability_id+".vec") :
     lines=[]
     # get all words from model
     words = model.get_words()
-    with open(currentdir+"/model"+cve+".vec",'w') as file_out:
+    with open(currentdir+"/model_"+vulnerability_id+".vec",'w') as file_out:
         # the first line must contain number of total words and vector dimension
         file_out.write(str(len(words)) + " " + str(model.get_dimension()) + "\n")
         # line by line, you append vectors to VEC file

@@ -4,6 +4,7 @@ from core import Git, Commit
 import random
 import chardet
 from shutil import rmtree
+from tqdm import tqdm_notebook as tqdm
 
 nlp= spacy.load("en_core_web_lg")
 GIT_CACHE = ''
@@ -118,7 +119,7 @@ def filter_doc(doc):
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
     
-    for token in tokens:
+    for token in tqdm(tokens):
         tmp_result = list()
         if special_chars_split(token.text):
             tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_three_char(special_char_token.lemma_)]

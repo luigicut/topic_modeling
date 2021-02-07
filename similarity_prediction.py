@@ -93,7 +93,7 @@ for commit in tqdm(commit_list):
 # %%
 cve_path = current_working_directory+'/diff_commits/'+vulnerability_id
 os.chdir(cve_path)
-nlp = spacy.load("fasttext_model/en_vectors_wiki_lg"+vulnerability_id)
+nlp = spacy.load("fasttext_model/en_vectors_wiki_lg_"+vulnerability_id)
 # os.chdir(candidate_commits_path)
 # os.chdir("..")
 cve_keywords = list()
