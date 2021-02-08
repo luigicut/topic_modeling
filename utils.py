@@ -279,7 +279,7 @@ def license_remove(txt, delim=('/*', '*/')):
  
     deliml, delimr = delim
     out = ''
-    if deliml in txt:
+    if deliml in txt and delimr in txt:
         indx = txt.index(deliml)
         out += txt[:indx]
         txt = txt[indx+len(deliml):]

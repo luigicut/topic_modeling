@@ -5,7 +5,7 @@ from datetime import datetime
 startTime = datetime.now()
 print('starting time: '+str(startTime))
 import os
-vulnerability_id ="CVE-2020-10714"
+vulnerability_id ="CVE-2020-11002"
 current_working_directory = os.getcwd()
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
@@ -75,7 +75,7 @@ for commit in tqdm(commit_list):
           # endTime = datetime.now()
           # print('finished at: '+str(endTime))
     else:
-        print("commit folder already exist")
+        print("commit folder already exist or it's empty")
     # utils.extract_files_from_diff(project_url,commit, vulnerability_id)
     
 # os.chdir(candidate_commits_path)
@@ -93,7 +93,7 @@ for commit in tqdm(commit_list):
 # %%
 cve_path = current_working_directory+'/diff_commits/'+vulnerability_id
 os.chdir(cve_path)
-nlp = spacy.load("fasttext_model/en_vectors_wiki_lg_"+vulnerability_id)
+nlp = spacy.load("gensim_model/en_vectors_wiki_lg_"+vulnerability_id)
 # os.chdir(candidate_commits_path)
 # os.chdir("..")
 cve_keywords = list()

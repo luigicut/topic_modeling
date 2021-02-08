@@ -1,6 +1,6 @@
 #%% 
 import os
-vulnerability_id = 'CVE-2020-1961'
+vulnerability_id = 'CVE-2020-11002'
 current_working_directory = os.getcwd()
 # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
@@ -26,7 +26,7 @@ else:
 print(project_url)
 cve_path = current_working_directory+'/diff_commits/'+vulnerability_id
 os.chdir(cve_path)
-model = fasttext.load_model(cve_path+"/fasttext_model/model"+vulnerability_id+".bin")
+model = fasttext.load_model(cve_path+"/fasttext_model/model_"+vulnerability_id+".bin")
 cve_keywords = list()
 os.chdir(cve_path)
 with open("cve_description_keywords.txt","r") as cve_keywords_file:
