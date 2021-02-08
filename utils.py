@@ -81,7 +81,7 @@ def special_chars_split(token):
 def string_not_spaces_or_one_char(s):
     return not s.isspace() and len(s) > 1
 
-def string_not_spaces_or_three_char(s):
+def string_not_spaces_or_two_char(s):
     return not s.isspace() and len(s) > 3
 
 def str_not_special_upper(s):
@@ -93,7 +93,7 @@ def str_not_special_upper(s):
 
 def split_funct(token, result):
     if str_not_special_upper(token.lemma_):
-      if string_not_spaces_or_three_char(token.lemma_):
+      if string_not_spaces_or_two_char(token.lemma_):
         result.append(str(token.lemma_).lower())
       return
     else:
@@ -119,19 +119,19 @@ def filter_doc(doc):
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
     
-    for token in tqdm(tokens):
+    for token in tokens:
         tmp_result = list()
         if special_chars_split(token.text):
-            tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_three_char(special_char_token.lemma_)]
+            tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_two_char(special_char_token.lemma_)]
             for sc_token in tmp_result:
                 if camel_case_split(sc_token.text):
-                    result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(sc_token.text))) if string_not_spaces_or_three_char(camel_case_token.lemma_)]
+                    result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(sc_token.text))) if string_not_spaces_or_two_char(camel_case_token.lemma_)]
                 else:
                     result.append(str(sc_token.lemma_).lower()) 
         elif camel_case_split(token.text): 
-            result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))  if string_not_spaces_or_three_char(camel_case_token.lemma_)]
+            result += [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))  if string_not_spaces_or_two_char(camel_case_token.lemma_)]
         else:
-            if string_not_spaces_or_three_char(token.lemma_):
+            if string_not_spaces_or_two_char(token.lemma_):
                 result.append(str(token.lemma_).lower()) 
 
     return ' '.join(result)
@@ -156,7 +156,7 @@ def simpler_filter_text(text):
         text = ' '.join([str(line) for line in text])
 
     # filter text, needs to be in chunks due to spacy maximum of 1000000 characters
-    result = ' '.join([filter_doc(nlp(chunk)) for chunk in text_into_chunks(text, chunk_size = 10000)]).lower()
+    result = ' '.join([filter_doc(nlp(chunk)) for chunk in tqdm(text_into_chunks(text, chunk_size = 10000))]).lower()
     return  result
 
 
@@ -234,7 +234,7 @@ def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
 
     diff = commit._exec.run(['git', 'diff', commit._id + "^.." + commit._id])
 
-    to_create_file = open(commit_sha+'.diff', 'wb',)
+    to_create_file = open(commit_sha+'.diff', 'wb')
     for item in diff:
         to_create_file.write(("%s\n" % item).encode('utf8'))
 

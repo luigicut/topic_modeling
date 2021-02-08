@@ -5,7 +5,7 @@ from datetime import datetime
 startTime = datetime.now()
 print('starting time: '+str(startTime))
 import os
-vulnerability_id ="CVE-2020-1961"
+vulnerability_id ="CVE-2020-10714"
 current_working_directory = os.getcwd()
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id

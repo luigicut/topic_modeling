@@ -120,8 +120,9 @@ print("finished!")
 
 # %%
 temp_file ="model_"+vulnerability_id
-
-if not os.path.exists(temp_file):
+if not os.path.exists("gensim_model"):
+  os.mkdir("gensim_model")
+if not os.path.exists(current_working_directory+'/diff_commits/'+vulnerability_id+"/gensim_model/"+temp_file):
     nlp.max_length = 12000000
     corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
     doc_list = []
@@ -147,26 +148,30 @@ if not os.path.exists(temp_file):
 
 
 #%%
+if not os.path.exists("fasttext_model"):
+  os.mkdir("fasttext_model")
+# os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id+"fasttext_model/")
 os.chdir("fasttext_model/")
+fasttext_model_path = current_working_directory+'/diff_commits/'+vulnerability_id+'/fasttext_model'
 if not os.path.isfile("model_"+vulnerability_id+".bin"):
     os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
     print("creating fasttext model")
     model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
     os.chdir("fasttext_model/")
-    currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    model.save_model(currentdir+"/model_"+vulnerability_id+".bin")
+    # currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    model.save_model(fasttext_model_path+"/model_"+vulnerability_id+".bin")
 else:
     print("model already exist, loading.")
-    currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    model = fasttext.load_model(currentdir+"/model_"+vulnerability_id+".bin")
+    model = fasttext.load_model(fasttext_model_path+"/model_"+vulnerability_id+".bin")
 
 
 #%%
+fasttext_model_path = current_working_directory+'/diff_commits/'+vulnerability_id+'/fasttext_model'
 if os.path.isfile("model_"+vulnerability_id+".bin") and not os.path.isfile("model_"+vulnerability_id+".vec") :
     lines=[]
     # get all words from model
     words = model.get_words()
-    with open(currentdir+"/model_"+vulnerability_id+".vec",'w') as file_out:
+    with open(fasttext_model_path+"/model_"+vulnerability_id+".vec",'w') as file_out:
         # the first line must contain number of total words and vector dimension
         file_out.write(str(len(words)) + " " + str(model.get_dimension()) + "\n")
         # line by line, you append vectors to VEC file

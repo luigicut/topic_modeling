@@ -97,8 +97,8 @@ def make_prediction(vulnerability_id, processed_file):
     words = corpora.Dictionary(doc_list)
     # Turns each document into a bag of words.
     corpus = [words.doc2bow(doc) for doc in doc_list]
-    temp_file = datapath("model"+vulnerability_id)
-    lda = gensim.models.ldamodel.LdaModel.load(temp_file)
+    temp_file = "model_"+vulnerability_id
+    lda = gensim.models.ldamodel.LdaModel.load(current_working_directory+'/diff_commits/'+vulnerability_id+'/gensim_model/'+temp_file)
     new_prediction= lda[corpus]
     new_prediction = new_prediction[0][2]
     words_concat = [[(words[id], freq) for id, freq in cp] for cp in corpus[:1]]
