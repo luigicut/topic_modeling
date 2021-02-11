@@ -10,12 +10,13 @@ import utils
 import gensim
 import gensim.corpora as corpora
 import fasttext
+from tqdm import tqdm
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from pprint import pprint
 # %%
 #DEFINE THE CVE 
-vulnerability_id = 'CVE-2020-10714'
+vulnerability_id = 'CVE-2020-4070'
 
 
 # %%
@@ -53,7 +54,7 @@ if not os.path.isfile('project_corpus.txt'):
     #git.Git().clone(project_url)
     #Check all the file from every directory from the project using os.walk excluding the following folders
     exclude_dir = set(['.git', '.vscode', '.idea'])
-    for root, dirs, files in os.walk(GIT_CACHE+"/"+project_name):
+    for root, dirs, files in tqdm(os.walk(GIT_CACHE+"/"+project_name)):
         dirs[:] = [d for d in dirs if d not in exclude_dir]
         for file in files:
             with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
@@ -123,7 +124,7 @@ temp_file ="model_"+vulnerability_id
 if not os.path.exists("gensim_model"):
   os.mkdir("gensim_model")
 if not os.path.exists(current_working_directory+'/diff_commits/'+vulnerability_id+"/gensim_model/"+temp_file):
-    nlp.max_length = 12000000
+    nlp.max_length = 16000000
     corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
     doc_list = []
     pr=nlp(str(corpus_file.read()))
@@ -171,7 +172,7 @@ if os.path.isfile("model_"+vulnerability_id+".bin") and not os.path.isfile("mode
     lines=[]
     # get all words from model
     words = model.get_words()
-    with open(fasttext_model_path+"/model_"+vulnerability_id+".vec",'w') as file_out:
+    with open(fasttext_model_path+"/model_"+vulnerability_id+".vec",'w',encoding='utf-8') as file_out:
         # the first line must contain number of total words and vector dimension
         file_out.write(str(len(words)) + " " + str(model.get_dimension()) + "\n")
         # line by line, you append vectors to VEC file
