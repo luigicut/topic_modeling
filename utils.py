@@ -4,7 +4,8 @@ from core import Git, Commit
 import random
 import chardet
 from shutil import rmtree
-from tqdm import tqdm_notebook as tqdm
+# from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm
 
 nlp= spacy.load("en_core_web_lg")
 GIT_CACHE = ''
@@ -82,7 +83,7 @@ def string_not_spaces_or_one_char(s):
     return not s.isspace() and len(s) > 1
 
 def string_not_spaces_or_two_char(s):
-    return not s.isspace() and len(s) > 3
+    return not s.isspace() and len(s) > 2
 
 def str_not_special_upper(s):
     '''
