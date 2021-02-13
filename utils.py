@@ -226,7 +226,7 @@ def reservoir_sampling(input_list, N):
     return sample
 
 
-def extract_files_from_diff(project_url,commit_sha, vulnerability_id):
+def extract_files_from_diff(project_url,commit_sha):
 
     git_repo = Git(project_url, cache_path=GIT_CACHE)
     git_repo.clone(skip_existing=True)

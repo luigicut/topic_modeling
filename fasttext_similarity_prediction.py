@@ -1,6 +1,6 @@
 #%% 
 import os
-vulnerability_id = 'CVE-2020-11002'
+vulnerability_id = 'CVE-2020-13973'
 current_working_directory = os.getcwd()
 # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
@@ -24,9 +24,13 @@ if  'fixes' in parsed_statments:
 else:
     raise SystemExit("please provide project URL and fix commit SHA and restart")
 print(project_url)
+
+project_name=project_url.split('/')[-1]
+print(project_name)
+
 cve_path = current_working_directory+'/diff_commits/'+vulnerability_id
 os.chdir(cve_path)
-model = fasttext.load_model(cve_path+"/fasttext_model/model_"+vulnerability_id+".bin")
+model = fasttext.load_model(current_working_directory+"/GIT_CACHE/"+project_name+"_models"+"/fasttext_model/model_"+project_name+".bin")
 cve_keywords = list()
 os.chdir(cve_path)
 with open("cve_description_keywords.txt","r") as cve_keywords_file:

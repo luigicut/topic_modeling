@@ -54,7 +54,7 @@ def process_file(file_name):
     os.chdir('committed_files')
     output_file = open(file_name,"r")
 
-    #TODO: METTERE QUESTE LINEE IN UNA FUNZIONE
+    #TODO: create function for these lines
     out=utils.license_remove(output_file.read())
     output_file.close()
     output_file = open(file_name,"w")
@@ -65,16 +65,6 @@ def process_file(file_name):
 
     os.chdir("../cleaned_committed_files")
     corpus_file = open("cleaned_"+file_name+".txt","w")
-    #TODO: QUA METTIAMO LA UTILS REMOVE LICENSE E GLI PASSIAMO OUTPUT_FILE SE LO LEGGE TUTTO E NE RIMUOVE LA LICENZA, RESTITUENDO IL FILE PULITO
-    
-    # READ EACH LINE OF TEXT
-    # for line in output_file.readlines():
-    #     if not line.isspace() and len(line) > 1:
-    #         encoded_line = line.encode("utf-8")
-    #         processed_line = utils.simpler_filter_text(str(encoded_line))
-    #         processed_line_striped = processed_line.strip() 
-    #         if processed_line_striped != '':
-    #             corpus_file.write(processed_line_striped+' ')
 
     # READ THE WHOLE TEXT
     processed_corpus = utils.simpler_filter_text(str(output_file.read()))
@@ -89,7 +79,7 @@ def process_file(file_name):
     os.chdir("..")
     return processed_file
 
-def make_prediction(vulnerability_id, processed_file):
+def make_prediction(project_name, processed_file):
     doc_list = []
     pr=nlp(str(processed_file))
     doc_list.append(pr)
@@ -97,8 +87,8 @@ def make_prediction(vulnerability_id, processed_file):
     words = corpora.Dictionary(doc_list)
     # Turns each document into a bag of words.
     corpus = [words.doc2bow(doc) for doc in doc_list]
-    temp_file = "model_"+vulnerability_id
-    lda = gensim.models.ldamodel.LdaModel.load(current_working_directory+'/diff_commits/'+vulnerability_id+'/gensim_model/'+temp_file)
+    temp_file = "model_"+project_name
+    lda = gensim.models.ldamodel.LdaModel.load(current_working_directory+'/GIT_CACHE/'+project_name+'_models'+'/gensim_model/'+temp_file)
     new_prediction= lda[corpus]
     new_prediction = new_prediction[0][2]
     words_concat = [[(words[id], freq) for id, freq in cp] for cp in corpus[:1]]
@@ -113,22 +103,18 @@ def make_prediction(vulnerability_id, processed_file):
 
     
 #%%
-def make_joint_prediction(vulnerability_id, project_url, commit_sha):
+def make_joint_prediction(project_name, project_url, commit_sha):
 
-    # os.chdir('diff_commits/'+vulnerability_id)
     if not os.path.isfile('joint_corpus_'+commit_sha+".txt"):
         output_file = open("joint_corpus_"+commit_sha+".txt","a+",encoding="utf-8")
         for root, dirs, files in os.walk('committed_files'):
             for file in files:
                 processed_file = process_file(file)
                 output_file.write(processed_file)
-                #IMPORTANT: remove make_prediction for single file, considering that we use only joint file prediction
-                # make_prediction(vulnerability_id, processed_file)
-                # os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
         output_file.close()
     
     output_file = open("joint_corpus_"+commit_sha+".txt","r",encoding="utf-8")
-    joint_file_prediction = make_prediction(vulnerability_id, output_file.read())
+    joint_file_prediction = make_prediction(project_name, output_file.read())
 
     return joint_file_prediction
 

@@ -12,7 +12,8 @@ topic_modeling_venv/
 .ipynb_checkpoints
 .idea
 
-GIT_CACHE
+GIT_CACHE/
+diff_commits/
 
 #dataset
 nytimes_front_page.csv

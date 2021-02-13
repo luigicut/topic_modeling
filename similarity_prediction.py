@@ -5,7 +5,7 @@ from datetime import datetime
 startTime = datetime.now()
 print('starting time: '+str(startTime))
 import os
-vulnerability_id ="CVE-2020-11002"
+vulnerability_id ="CVE-2020-13973"
 current_working_directory = os.getcwd()
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
@@ -23,7 +23,8 @@ if  'fixes' in parsed_statments:
 else:
     raise SystemExit("please provide project URL and fix commit SHA and restart")
 
-
+project_name=project_url.split('/')[-1]
+print(project_name)
 
 import re
 import spacy
@@ -37,7 +38,17 @@ LDA_WORDS_NUMBER = 50
 current_working_directory = os.getcwd()
 print(current_working_directory)
 # %%
-os.chdir('diff_commits/'+vulnerability_id)
+os.chdir('diff_commits/')
+if not os.path.isdir('./'+vulnerability_id):
+    print('create folder...')
+    # creates a folder using CVE name
+    os.mkdir(vulnerability_id)
+    os.chdir(vulnerability_id)
+else:
+    print('folder already exists')
+    os.chdir(vulnerability_id)
+    print('in folder: '+os.getcwd())
+
 if not os.path.isdir('./candidate_commits'):
     print('create folder...')
     # creates a folder using CVE name
@@ -52,6 +63,7 @@ candidate_commits_path = current_working_directory+'/diff_commits/'+vulnerabilit
 #RETRIVING THE COMMIT LIST
 commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
 print(len(commit_list))
+
 #%%
 # commit_list = ['e07263dedad7ed44e188abb11260fa3061afadc4']
 #CREATING A FOLDER FOR EACH COMMIT 
@@ -62,12 +74,12 @@ for commit in tqdm(commit_list):
         os.chdir(commit)
         os.mkdir("committed_files")
         os.mkdir("cleaned_committed_files")
-        utils.extract_files_from_diff(project_url,commit, vulnerability_id)
+        utils.extract_files_from_diff(project_url,commit)
         utils.folder_cleaner(commit, candidate_commits_path)
         if os.path.exists(commit):
           print("processing commit : "+commit)
           os.chdir(candidate_commits_path+"/"+commit)
-          commit_pred = topic_modeling_files.make_joint_prediction(vulnerability_id, project_url, commit)
+          commit_pred = topic_modeling_files.make_joint_prediction(project_name, project_url, commit)
           prediction_joint_file = open("prediction_joint_corpus_"+commit+".txt","w")
           for item in commit_pred:
               prediction_joint_file.writelines(str(item)+"\n")
@@ -93,7 +105,7 @@ for commit in tqdm(commit_list):
 # %%
 cve_path = current_working_directory+'/diff_commits/'+vulnerability_id
 os.chdir(cve_path)
-nlp = spacy.load("gensim_model/en_vectors_wiki_lg_"+vulnerability_id)
+nlp = spacy.load(current_working_directory+"/GIT_CACHE/"+project_name+"_models/"+"gensim_model/en_vectors_wiki_lg_"+project_name)
 # os.chdir(candidate_commits_path)
 # os.chdir("..")
 cve_keywords = list()

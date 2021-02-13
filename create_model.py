@@ -10,13 +10,14 @@ import utils
 import gensim
 import gensim.corpora as corpora
 import fasttext
+# from tqdm import tqdm_notebook as tqdm
 from tqdm import tqdm
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from pprint import pprint
 # %%
-#DEFINE THE CVE 
-vulnerability_id = 'CVE-2020-4070'
+#DEFINE THE CVE
+vulnerability_id = 'CVE-2020-13973'
 
 
 # %%
@@ -38,15 +39,15 @@ project_name=project_url.split('/')[-1]
 print(project_name)
 
 
-os.chdir('diff_commits/')
-if not os.path.isdir('./'+vulnerability_id):
+os.chdir('GIT_CACHE/')
+if not os.path.isdir('./'+project_name+"_models"):
     print('create folder...')
-    # creates a folder using CVE name
-    os.mkdir(vulnerability_id)
-    os.chdir(vulnerability_id)
+    # creates a folder using project name to store project corpus and models
+    os.mkdir(project_name+"_models")
+    os.chdir(project_name+"_models")
 else:
     print('folder already exists')
-    os.chdir(vulnerability_id)
+    os.chdir(project_name+"_models")
     print('in folder: '+os.getcwd())
 
 if not os.path.isfile('project_corpus.txt'):
@@ -58,12 +59,12 @@ if not os.path.isfile('project_corpus.txt'):
         dirs[:] = [d for d in dirs if d not in exclude_dir]
         for file in files:
             with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
-                print(tmp_file.name)
+                # print(tmp_file.name)
                 #Open file as byte to use it with chardet
                 byte_tmp_file = open(os.path.join(root, file), "rb")
                 #Using chardet prediction to exclude not ascii or utf8 files
                 file_type = chardet.detect(byte_tmp_file.read())['encoding']
-                print(file_type)
+                # print(file_type)
                 #TODO: Remove None and type Windows-1254 (TIS-620, ISO-8859-1(html), if this give no error)
                 if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
                     output_file.write(tmp_file.read()+' ')
@@ -107,10 +108,9 @@ def remove_stopwords(doc):
 nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
 nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 
-
 # %%
 #REMOVING ALL SNAKE,CAMEL,DOT WORDS
-os.chdir('diff_commits/'+vulnerability_id)
+os.chdir('GIT_CACHE/'+project_name+"_models")
 if not os.path.isfile('project_corpus_cleaned.txt'):
     processed_corpus= utils.simpler_filter_text(str(output_file.read()))
     corpus_file = open("project_corpus_cleaned.txt","w",encoding="utf-8")
@@ -120,11 +120,11 @@ output_file.close()
 print("finished!")
 
 # %%
-temp_file ="model_"+vulnerability_id
+temp_file ="model_"+project_name
 if not os.path.exists("gensim_model"):
   os.mkdir("gensim_model")
-if not os.path.exists(current_working_directory+'/diff_commits/'+vulnerability_id+"/gensim_model/"+temp_file):
-    nlp.max_length = 16000000
+if not os.path.exists(current_working_directory+'/GIT_CACHE/'+project_name+"_models"+"/gensim_model/"+temp_file):
+    nlp.max_length = 12000000
     corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
     doc_list = []
     pr=nlp(str(corpus_file.read()))
@@ -132,7 +132,6 @@ if not os.path.exists(current_working_directory+'/diff_commits/'+vulnerability_i
 
     # Creates, which is a mapping of word IDs to words.
     words = corpora.Dictionary(doc_list)
-
     corpus = [words.doc2bow(doc) for doc in doc_list]
 
     lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
@@ -145,34 +144,32 @@ if not os.path.exists(current_working_directory+'/diff_commits/'+vulnerability_i
                                             per_word_topics=True)
 
     pprint(lda_model.print_topics(num_words=40))
-    lda_model.save(current_working_directory+'/diff_commits/'+vulnerability_id+"/gensim_model/"+temp_file)   
-
+    lda_model.save(current_working_directory+'/GIT_CACHE/'+project_name+"_models"+"/gensim_model/"+temp_file)
 
 #%%
 if not os.path.exists("fasttext_model"):
   os.mkdir("fasttext_model")
-# os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id+"fasttext_model/")
 os.chdir("fasttext_model/")
-fasttext_model_path = current_working_directory+'/diff_commits/'+vulnerability_id+'/fasttext_model'
-if not os.path.isfile("model_"+vulnerability_id+".bin"):
-    os.chdir(current_working_directory+'/diff_commits/'+vulnerability_id)
+fasttext_model_path = current_working_directory+'/GIT_CACHE/'+project_name+"_models"+'/fasttext_model'
+if not os.path.isfile("model_"+project_name+".bin"):
+    os.chdir(current_working_directory+'/GIT_CACHE/'+project_name+"_models")
     print("creating fasttext model")
     model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
     os.chdir("fasttext_model/")
     # currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    model.save_model(fasttext_model_path+"/model_"+vulnerability_id+".bin")
+    model.save_model(fasttext_model_path+"/model_"+project_name+".bin")
 else:
     print("model already exist, loading.")
-    model = fasttext.load_model(fasttext_model_path+"/model_"+vulnerability_id+".bin")
+    model = fasttext.load_model(fasttext_model_path+"/model_"+project_name+".bin")
 
 
 #%%
-fasttext_model_path = current_working_directory+'/diff_commits/'+vulnerability_id+'/fasttext_model'
-if os.path.isfile("model_"+vulnerability_id+".bin") and not os.path.isfile("model_"+vulnerability_id+".vec") :
+fasttext_model_path = current_working_directory+'/GIT_CACHE/'+project_name+"_models"+'/fasttext_model'
+if os.path.isfile("model_"+project_name+".bin") and not os.path.isfile("model_"+project_name+".vec") :
     lines=[]
     # get all words from model
     words = model.get_words()
-    with open(fasttext_model_path+"/model_"+vulnerability_id+".vec",'w',encoding='utf-8') as file_out:
+    with open(fasttext_model_path+"/model_"+project_name+".vec",'w',encoding='utf-8') as file_out:
         # the first line must contain number of total words and vector dimension
         file_out.write(str(len(words)) + " " + str(model.get_dimension()) + "\n")
         # line by line, you append vectors to VEC file
