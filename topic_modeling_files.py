@@ -81,6 +81,7 @@ def process_file(file_name):
 
 def make_prediction(project_name, processed_file):
     doc_list = []
+    nlp.max_length = 5000000
     pr=nlp(str(processed_file))
     doc_list.append(pr)
     # Creates, which is a mapping of word IDs to words.
