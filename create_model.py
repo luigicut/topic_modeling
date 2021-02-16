@@ -16,8 +16,9 @@ from tqdm import tqdm
 from spacy.lang.en.stop_words import STOP_WORDS
 from pprint import pprint
 # %%
-#DEFINE THE CVE
-vulnerability_id = 'CVE-2020-13973'
+#DEFINE THE CVE 
+vulnerability_id = 'CVE-2019-12422'
+chunk_size = 1000000
 
 
 # %%
@@ -120,19 +121,35 @@ output_file.close()
 print("finished!")
 
 # %%
+
+def read_in_chunks(file_object, chunk_size=chunk_size):
+    """Lazy function (generator) to read a file piece by piece.
+    Default chunk size: 1k."""
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
+#%%
 temp_file ="model_"+project_name
 if not os.path.exists("gensim_model"):
   os.mkdir("gensim_model")
 if not os.path.exists(current_working_directory+'/GIT_CACHE/'+project_name+"_models"+"/gensim_model/"+temp_file):
-    nlp.max_length = 12000000
-    corpus_file = open("project_corpus_cleaned.txt","r",encoding="utf-8")
+    nlp.max_length = 15000000
     doc_list = []
-    pr=nlp(str(corpus_file.read()))
-    doc_list.append(pr)
+    words = corpora.Dictionary(doc_list)
+    with open('project_corpus_cleaned.txt', "r", encoding='utf-8') as f:
+        for piece in read_in_chunks(f):
+            next_doc_list = []
+            pr=nlp(str(piece))
+            next_doc_list.append(pr)
+            words.add_documents(next_doc_list)
+            doc_list.extend(next_doc_list)
+    flat_list = [[item for sublist in doc_list for item in sublist]]
 
     # Creates, which is a mapping of word IDs to words.
-    words = corpora.Dictionary(doc_list)
-    corpus = [words.doc2bow(doc) for doc in doc_list]
+    # words = corpora.Dictionary(doc_list)
+    corpus = [words.doc2bow(doc) for doc in flat_list]
 
     lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
                                             id2word=words,
@@ -156,7 +173,6 @@ if not os.path.isfile("model_"+project_name+".bin"):
     print("creating fasttext model")
     model = fasttext.train_unsupervised('project_corpus_cleaned.txt')
     os.chdir("fasttext_model/")
-    # currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     model.save_model(fasttext_model_path+"/model_"+project_name+".bin")
 else:
     print("model already exist, loading.")
