@@ -22,6 +22,7 @@ for root, dirs, files in os.walk("statements"):
 
                 if project_url not in project_list and "https://github.com/" in project_url:
                     project_list.append(project_url)
+                    output_file.writelines(project_url+"\n")
 
-            
+output_file.close()
 print(len(project_list))
