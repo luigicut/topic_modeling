@@ -91,26 +91,6 @@ def str_not_special_upper(s):
     '''
     return bool(re.match('^[a-zA-Z0-9]*$',s)) and not any(x.isupper() for x in s)
 
-
-def split_funct(token, result):
-    if str_not_special_upper(token.lemma_):
-      if string_not_spaces_or_two_char(token.lemma_):
-        result.append(str(token.lemma_).lower())
-      return
-    else:
-        if camel_case_split(token.text):
-            temp_result = [camel_case_token.lemma_ for camel_case_token in nlp(' '.join(camel_case_split(token.text)))]
-            for new_token in nlp(' '.join(temp_result)):
-                split_funct(new_token, result)
-        if snake_case_split(token.text):
-            temp_result = [snake_case_token.lemma_ for snake_case_token in nlp(' '.join(snake_case_split(token.text)))]
-            for new_token in nlp(' '.join(temp_result)):
-                split_funct(new_token, result)
-        if special_chars_split(token.text):
-            temp_result = [dot_case_token.lemma_ for dot_case_token in nlp(' '.join(special_chars_split(token.text)))]
-            for new_token in nlp(' '.join(temp_result)):
-                split_funct(new_token, result)
-
 def filter_doc(doc):
     if type(doc) != spacy.tokens.doc.Doc:
         raise TypeError("The document should be a spacy.tokens.doc.Doc, which is created by means of nlp(")
@@ -120,7 +100,7 @@ def filter_doc(doc):
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
     
-    for token in tokens:
+    for token in tqdm(tokens):
         tmp_result = list()
         if special_chars_split(token.text):
             tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_two_char(special_char_token.lemma_)]
@@ -157,8 +137,16 @@ def simpler_filter_text(text):
         text = ' '.join([str(line) for line in text])
 
     # filter text, needs to be in chunks due to spacy maximum of 1000000 characters
-    result = ' '.join([filter_doc(nlp(chunk)) for chunk in tqdm(text_into_chunks(text, chunk_size = 10000))]).lower()
+    result = ' '.join([filter_doc(nlp(chunk)) for chunk in tqdm(text_into_chunks(text, chunk_size = 500000))]).lower()
     return  result
+
+def filterChunkDoc(chunk):
+  # index +=1
+  # print('chunk: '+str(index))
+  # p = current_process()
+  # print('process counter:', p._identity[0], 'pid:', os.getpid())
+  # to call for multiprocessing
+  return filter_doc(chunk)
 
 
 def timestamp_to_timestamp_interval(timestamp, days_before, days_after):
@@ -201,7 +189,7 @@ def get_commit_ids_between_timestamp(since, until, git_repo, repository_url):
     return [l.strip() for l in out]
 
 def gather_candidate_commits(published_timestamp, project_url):
-        since, until = timestamp_to_timestamp_interval(published_timestamp, days_before=183, days_after=100)
+        since, until = timestamp_to_timestamp_interval(published_timestamp, days_before=730, days_after=100)
 
         ### Add commits before NVD release with maximum to add
         commit_ids_to_add_before = get_commit_ids_between_timestamp(str(since), str(published_timestamp), git_repo=None, repository_url=project_url)

@@ -15,11 +15,13 @@ from tqdm import tqdm
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from pprint import pprint
+from datetime import datetime
 # %%
 #DEFINE THE CVE 
-vulnerability_id = 'CVE-2019-12422'
+vulnerability_id = 'CVE-2015-6748'
 chunk_size = 1000000
-
+startTime = datetime.now()
+print('starting time: '+str(startTime))
 
 # %%
 
@@ -27,7 +29,7 @@ chunk_size = 1000000
 current_working_directory = os.getcwd()
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 GIT_CACHE = os.environ['GIT_CACHE']
-statments_yaml = open("statements/"+vulnerability_id+"/statement.yaml",'r')
+statments_yaml = open(current_working_directory+"/statements/"+vulnerability_id+"/statement.yaml",'r')
 parsed_statments =  yaml.load(statments_yaml, Loader=yaml.FullLoader)
 project_url = ''
 
@@ -114,6 +116,9 @@ nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
 os.chdir('GIT_CACHE/'+project_name+"_models")
 if not os.path.isfile('project_corpus_cleaned.txt'):
     processed_corpus= utils.simpler_filter_text(str(output_file.read()))
+    endTime = datetime.now()
+    print('started at: '+str(startTime))
+    print('finished at: '+str(endTime))  
     corpus_file = open("project_corpus_cleaned.txt","w",encoding="utf-8")
     corpus_file.write(processed_corpus)
     corpus_file.close()
