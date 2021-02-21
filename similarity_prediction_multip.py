@@ -7,7 +7,8 @@ import utils
 import gather_commits
 import gensim
 import gensim.corpora as corpora
-from tqdm import tqdm_notebook as tqdm
+# from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm
 from datetime import datetime
 import os
 
@@ -20,30 +21,31 @@ if 'PROJECT_URL' in os.environ:
 project_name = project_url.split('/')[-1]
 
 
-current_working_directory = os.getcwd()
-os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
+# current_working_directory = os.getcwd()
+# os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 from multiprocessing import Pool
 number_of_cpus = os.cpu_count()
 startTime = datetime.now()
 print('starting time: '+str(startTime))
 
-nlp= spacy.load("en_core_web_lg")
-stop_word = open(current_working_directory+"/stop_word.txt", "r")
-stop_list = stop_word.readline().split(",")
-# Add project name sto stopwords
-stop_list.append(project_name)
-# Updates spaCy's default stop words list with my additional words. 
-nlp.Defaults.stop_words.update(stop_list)
+# nlp= spacy.load("en_core_web_lg")
+# stop_word = open(current_working_directory+"/stop_word.txt", "r")
+# stop_list = stop_word.readline().split(",")
+# # Add project name sto stopwords
+# stop_list.append(project_name)
+# # Updates spaCy's default stop words list with my additional words. 
+# nlp.Defaults.stop_words.update(stop_list)
 
 # Iterates over the words in the stop words list and resets the "is_stop" flag.
-for word in STOP_WORDS:
-    lexeme = nlp.vocab[word]
-    lexeme.is_stop = True
+# for word in STOP_WORDS:
+#     lexeme = nlp.vocab[word]
+#     lexeme.is_stop = True
 
 import yaml
 
 
 def lemmatizer(doc):
+    nlp = spacy.load("en_core_web_lg")
     # This takes in a doc of tokens from the NER and lemmatizes them. 
     # Pronouns (like "I" and "you" get lemmatized to '-PRON-', so I'm removing those.
     doc = [token.lemma_ for token in doc if token.lemma_ != '-PRON-']
@@ -56,11 +58,7 @@ def remove_stopwords(doc):
     doc = [token.text for token in doc if token.is_stop != True and token.is_punct != True]
     return doc
 
-
-nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
-nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
-
-def make_prediction(project_name, processed_file):
+def make_prediction(project_name, processed_file, nlp, current_working_directory):
     doc_list = []
     nlp.max_length = 5000000
     pr=nlp(str(processed_file))
@@ -89,10 +87,10 @@ def text_into_chunks(text, chunk_size=1000):
         text = ' '.join(text)
     return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
 
-def process_file(file_name, nlp2):
+def process_file(file_name, nlp):
     os.chdir('committed_files')
     output_file = open(file_name,"r")
-
+    nlp2 = spacy.load("en_core_web_lg")
     #TODO: create function for these lines
     out=utils.license_remove(output_file.read())
     output_file.close()
@@ -106,7 +104,7 @@ def process_file(file_name, nlp2):
     # corpus_file = open("cleaned_"+file_name+".txt","w")
 
     text = str(output_file.read())
-    output_file.close()
+
     # when a list is provided concatenate it into a string
     if type(text) == list:
         text = ' '.join([str(line) for line in text])
@@ -114,18 +112,15 @@ def process_file(file_name, nlp2):
     with Pool(number_of_cpus) as p:
       # filter text, needs to be in chunks due to spacy maximum of 1000000 characters
       result = p.map(utils.filterChunkDoc, [nlp2(chunk) for chunk in tqdm(text_into_chunks(text, chunk_size = 500000))])
-    endTime = datetime.now()
-    print('started at: '+str(startTime))
-    print('finished at: '+str(endTime))  
+
+ 
     processed_corpus =  ' '.join(result).lower()
     # processed_corpus= utils.simpler_filter_text(str(output_file.read()))
     print('OUT!')
+    output_file.close()
     # READ THE WHOLE TEXT
     # processed_corpus = utils.simpler_filter_text(str(output_file.read()))
     # corpus_file.write(processed_corpus+' ')
-
-
-    
     # corpus_file.close()
     # corpus_file = open("cleaned_"+file_name+".txt","r")
     # processed_file = corpus_file.read()
@@ -133,30 +128,37 @@ def process_file(file_name, nlp2):
     os.chdir("..")
     return processed_corpus+' '
 
-def make_joint_prediction(project_name, project_url, commit_sha, nlp2):
+def make_joint_prediction(project_name, project_url, commit_sha, nlp, current_working_directory):
 
     if not os.path.isfile('joint_corpus_'+commit_sha+".txt"):
         output_file = open("joint_corpus_"+commit_sha+".txt","a+",encoding="utf-8")
         for root, dirs, files in os.walk('committed_files'):
             for file in files:
-                processed_file = process_file(file, nlp2)
+                processed_file = process_file(file, nlp)
                 output_file.write(processed_file)
         output_file.close()
+        endTime = datetime.now()
+        print('started at: '+str(startTime))
+        print('finished at: '+str(endTime)) 
     
     output_file = open("joint_corpus_"+commit_sha+".txt","r",encoding="utf-8")
-    joint_file_prediction = make_prediction(project_name, output_file.read())
+    joint_file_prediction = make_prediction(project_name, output_file.read(), nlp, current_working_directory)
 
     return joint_file_prediction
 
 def main():
+
+  current_working_directory = os.getcwd()
+  # os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
+  
+  
   vulnerability_id ="CVE-2020-13973"
 
-  nlp2 = spacy.load("en_core_web_lg")
 
   os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
   GIT_CACHE = os.environ['GIT_CACHE']
-  startTime = datetime.now()
-  print('starting time: '+str(startTime))
+  # startTime = datetime.now()
+  # print('starting time: '+str(startTime))
   statments_yaml = open("statements/"+vulnerability_id+"/statement.yaml",'r')
   parsed_statments =  yaml.load(statments_yaml, Loader=yaml.FullLoader)
   project_url = ''
@@ -171,6 +173,26 @@ def main():
 
   project_name=project_url.split('/')[-1]
   print(project_name)
+
+
+  nlp= spacy.load("en_core_web_lg")
+  
+  nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
+
+  
+  stop_word = open(current_working_directory+"/stop_word.txt", "r")
+  stop_list = stop_word.readline().split(",")
+  # Add project name sto stopwords
+  stop_list.append(project_name)
+  # Updates spaCy's default stop words list with my additional words. 
+  nlp.Defaults.stop_words.update(stop_list)
+
+
+  for word in STOP_WORDS:
+    lexeme = nlp.vocab[word]
+    lexeme.is_stop = True
+
+  nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
 
 
 
@@ -231,7 +253,7 @@ def main():
           if os.path.exists(commit):
             print("processing commit : "+commit)
             os.chdir(project_commits_path+"/"+commit)
-            commit_pred = make_joint_prediction(project_name, project_url, commit, nlp2)
+            commit_pred = make_joint_prediction(project_name, project_url, commit, nlp, current_working_directory)
             prediction_joint_file = open("prediction_joint_corpus_"+commit+".txt","w")
             for item in commit_pred:
                 prediction_joint_file.writelines(str(item)+"\n")
