@@ -11,6 +11,10 @@ nlp= spacy.load("en_core_web_lg")
 GIT_CACHE = ''
 if 'GIT_CACHE' in os.environ:
     GIT_CACHE = os.environ['GIT_CACHE']
+else:
+  current_working_directory = os.getcwd()
+  os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
+  GIT_CACHE = os.environ['GIT_CACHE']
 
 def camel_case_split(token):
     '''

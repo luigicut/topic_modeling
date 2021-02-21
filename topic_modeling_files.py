@@ -63,21 +63,21 @@ def process_file(file_name):
     output_file = open(file_name,"r")
 
 
-    os.chdir("../cleaned_committed_files")
-    corpus_file = open("cleaned_"+file_name+".txt","w")
+    # os.chdir("../cleaned_committed_files")
+    # corpus_file = open("cleaned_"+file_name+".txt","w")
 
     # READ THE WHOLE TEXT
     processed_corpus = utils.simpler_filter_text(str(output_file.read()))
-    corpus_file.write(processed_corpus+' ')
+    # corpus_file.write(processed_corpus+' ')
 
 
     output_file.close()
-    corpus_file.close()
-    corpus_file = open("cleaned_"+file_name+".txt","r")
-    processed_file = corpus_file.read()
-    corpus_file.close()
+    # corpus_file.close()
+    # corpus_file = open("cleaned_"+file_name+".txt","r")
+    # processed_file = corpus_file.read()
+    # corpus_file.close()
     os.chdir("..")
-    return processed_file
+    return processed_corpus+' '
 
 def make_prediction(project_name, processed_file):
     doc_list = []

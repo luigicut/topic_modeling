@@ -4,6 +4,7 @@ vulnerability_id = 'CVE-2020-13973'
 current_working_directory = os.getcwd()
 # os.environ['GIT_CACHE'] = current_working_directory + '/diff_commits/'+vulnerability_id
 os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
+GIT_CACHE = os.environ['GIT_CACHE']
 from scipy import spatial
 import fasttext
 import gather_commits
@@ -42,9 +43,9 @@ print(str(cve_keywords))
 os.chdir(current_working_directory)
 commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
 os.chdir(cve_path)
-candidate_commits_path = current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits"
+project_commits_path = GIT_CACHE+"/"+project_name+"_commits"
 for commit in commit_list:
-    os.chdir(candidate_commits_path)
+    os.chdir(project_commits_path)
     if os.path.exists(commit):
         prediction_joint_file = open(commit+"/prediction_joint_corpus_"+commit+".txt","r")
         prediction_words_all_list = re.findall(r"'(.*?)'", prediction_joint_file.read())
