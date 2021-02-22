@@ -152,7 +152,7 @@ def main():
   # os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
   
   
-  vulnerability_id ="CVE-2020-13973"
+  vulnerability_id ="CVE-2015-6748"
 
 
   os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
@@ -291,17 +291,22 @@ def main():
   # os.chdir(candidate_commits_path)
   for commit in commit_list:
       os.chdir(project_commits_path)
+      # print('project_commits_path: '+project_commits_path)
       if os.path.exists(commit):
-          prediction_joint_file = open(commit+"/prediction_joint_corpus_"+commit+".txt","r")
+        if commit == "00c8d2b7623259246c4eb5df63494c6b42c08f85":
+          # print('commit: '+commit)
+          prediction_joint_file = open(project_commits_path+"/"+commit+"/prediction_joint_corpus_"+commit+".txt","r")
+          # print('prediction_joint_file: '+prediction_joint_file.read())
           prediction_words_list = re.findall(r"'(.*?)'", prediction_joint_file.read())[:LDA_WORDS_NUMBER-1]
+          # print('prediction_words_list: '+str(prediction_words_list))
           # print(str(prediction_words_list))
           similarity_avg = 0
-          # if commit == "e07263dedad7ed44e188abb11260fa3061afadc4":
           for key in cve_keywords:
               max_value = -1
               for pred in prediction_words_list:
                   k = nlp(key)
                   p = nlp(pred)
+                  kSimP = k.similarity(p)
                   if k.similarity(p) > max_value:
                       max_value = k.similarity(p)
               similarity_avg += max_value

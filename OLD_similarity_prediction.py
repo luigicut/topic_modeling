@@ -18,7 +18,7 @@ project_name = project_url.split('/')[-1]
 current_working_directory = os.getcwd()
 
 def main():
-  vulnerability_id ="CVE-2020-13973"
+  vulnerability_id ="CVE-2015-6748"
 
   # nlp2 = spacy.load("en_core_web_lg")
 

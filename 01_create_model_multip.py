@@ -55,7 +55,7 @@ def text_into_chunks(text, chunk_size=1000):
 def main():
 
   #DEFINE THE CVE 
-  vulnerability_id = 'CVE-2015-6748'
+  vulnerability_id = 'CVE-2019-17572'
   chunk_size = 1000000
   nlp = spacy.load("en_core_web_lg")
   nlp2 = spacy.load("en_core_web_lg")
@@ -107,7 +107,7 @@ def main():
                   file_type = chardet.detect(byte_tmp_file.read())['encoding']
                   # print(file_type)
                   #TODO: Remove None and type Windows-1254 (TIS-620, ISO-8859-1(html), if this give no error)
-                  if str(file_type) == 'utf-8' or str(file_type) == 'ascii':
+                  if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
                       output_file.write(tmp_file.read()+' ')
                   tmp_file.close()
                   byte_tmp_file.close()
@@ -172,7 +172,7 @@ def main():
       doc_list = []
       words = corpora.Dictionary(doc_list)
       with open('project_corpus_cleaned.txt', "r", encoding='utf-8') as f:
-          for piece in read_in_chunks(f, chunk_size):
+          for piece in tqdm(read_in_chunks(f, chunk_size)):
               next_doc_list = []
               pr=nlp(str(piece))
               next_doc_list.append(pr)

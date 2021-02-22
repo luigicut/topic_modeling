@@ -104,7 +104,8 @@ def filter_doc(doc):
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
     
-    for token in tqdm(tokens):
+    # for token in tqdm(tokens):
+    for token in tokens:
         tmp_result = list()
         if special_chars_split(token.text):
             tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_two_char(special_char_token.lemma_)]
@@ -259,13 +260,13 @@ def extract_files_from_diff(project_url,commit_sha):
                     f.close()
             except:
                 print("Git command failed. Could not obtain commit ids.")
-                return
+                return 
 
-def folder_cleaner(commit, candidate_commits_path):
+def folder_cleaner(commit, project_commits_path):
     os.chdir("..")
-    if len(os.listdir(candidate_commits_path+"/"+commit+"/committed_files")) == 0 :
+    if len(os.listdir(project_commits_path+"/"+commit+"/committed_files")) == 0 :
         rmtree(commit, ignore_errors=True)
-
+        print('deleted commit: '+commit)
 
 def license_remove(txt, delim=('/*', '*/')):
     'Strips first nest of block comments'
