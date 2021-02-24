@@ -104,8 +104,8 @@ def filter_doc(doc):
     tokens = [token for token in doc if token.is_punct == False and token.is_stop == False and any(char for char in token.text if char.isalpha()) and len(token) > 1] #token.pos_ in ['VERB', 'NOUN', 'PROPN', 'ADJ'] and 
     result = list()
     
-    # for token in tqdm(tokens):
-    for token in tokens:
+    for token in tqdm(tokens):
+    # for token in tokens:
         tmp_result = list()
         if special_chars_split(token.text):
             tmp_result = [special_char_token for special_char_token in nlp(' '.join(special_chars_split(token.text))) if string_not_spaces_or_two_char(special_char_token.lemma_)]
@@ -145,12 +145,8 @@ def simpler_filter_text(text):
     result = ' '.join([filter_doc(nlp(chunk)) for chunk in tqdm(text_into_chunks(text, chunk_size = 500000))]).lower()
     return  result
 
-def filterChunkDoc(chunk):
-  # index +=1
-  # print('chunk: '+str(index))
-  # p = current_process()
-  # print('process counter:', p._identity[0], 'pid:', os.getpid())
-  # to call for multiprocessing
+def filterChunkDoc(chunk, project_name, current_working_directory):
+  os.chdir(current_working_directory+'/GIT_CACHE/'+project_name+"_models")
   return filter_doc(chunk)
 
 
@@ -242,7 +238,7 @@ def extract_files_from_diff(project_url,commit_sha):
             lines = diff_file.readlines()
             for i in range(0, len(lines)):
                 if (lines[i].startswith('diff --git ')):
-                    if not lines[i+1].startswith('deleted'):
+                    if not lines[i+1].startswith('deleted') and not lines[i+1].startswith('similarity'):
                         path = lines[i].split(' b/')[1].rstrip("\n")
                         paths_list.append(path)
             

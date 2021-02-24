@@ -24,10 +24,9 @@ project_name = project_url.split('/')[-1]
 # current_working_directory = os.getcwd()
 # os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
 from multiprocessing import Pool
-number_of_cpus = os.cpu_count()
 startTime = datetime.now()
 print('starting time: '+str(startTime))
-
+nlp= spacy.load("en_core_web_lg")
 # nlp= spacy.load("en_core_web_lg")
 # stop_word = open(current_working_directory+"/stop_word.txt", "r")
 # stop_list = stop_word.readline().split(",")
@@ -45,7 +44,7 @@ import yaml
 
 
 def lemmatizer(doc):
-    nlp = spacy.load("en_core_web_lg")
+    # nlp = spacy.load("en_core_web_lg")
     # This takes in a doc of tokens from the NER and lemmatizes them. 
     # Pronouns (like "I" and "you" get lemmatized to '-PRON-', so I'm removing those.
     doc = [token.lemma_ for token in doc if token.lemma_ != '-PRON-']
@@ -57,6 +56,23 @@ def remove_stopwords(doc):
     # Use token.text to return strings, which we'll need for Gensim.
     doc = [token.text for token in doc if token.is_stop != True and token.is_punct != True]
     return doc
+
+nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
+nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
+
+
+stop_word = open("stop_word.txt", "r")
+stop_list = stop_word.readline().split(",")
+# Add project name sto stopwords
+stop_list.append(project_name)
+# Updates spaCy's default stop words list with my additional words. 
+nlp.Defaults.stop_words.update(stop_list)
+
+
+for word in STOP_WORDS:
+  lexeme = nlp.vocab[word]
+  lexeme.is_stop = True
+
 
 def make_prediction(project_name, processed_file, current_working_directory, nlp):
     # nlp = spacy.load("en_core_web_lg")
@@ -131,7 +147,7 @@ def create_joint_corpus(project_name, project_url, commit_sha, current_working_d
     # return joint_file_prediction
 
 
-def gather_commit_multi(commit, current_working_directory, project_name, vulnerability_id):
+def gather_commit_multi(commit, current_working_directory, project_name, vulnerability_id, project_url):
   project_commits_path = current_working_directory+"/GIT_CACHE/"+project_name+"_commits"
   os.chdir(project_commits_path)
   if not os.path.isdir(commit):
@@ -140,7 +156,7 @@ def gather_commit_multi(commit, current_working_directory, project_name, vulnera
       os.mkdir("committed_files")
       # os.mkdir("cleaned_committed_files")
       print("processing commit : "+commit)
-      # if commit == "c60b6dba5271e386f45347b129da6e763b8d93a7":
+  
         # if commit == "624bbc8b50f7b5b6a1addc62040e4f2587f24f1b":
       utils.extract_files_from_diff(project_url, commit)
       utils.folder_cleaner(commit, project_commits_path)
@@ -152,12 +168,13 @@ def gather_commit_multi(commit, current_working_directory, project_name, vulnera
         # for item in commit_pred:
         #     prediction_joint_file.writelines(str(item)+"\n")
         # prediction_joint_file.close()
-        
-        
+          
+          
         # endTime = datetime.now()
         # print('finished at: '+str(endTime))
   else:
       print("commit folder already exist or it's empty")
+  return
 
 def handle_multiprocessing_prediction(commit, current_working_directory, project_name, nlp):
   project_commits_path = current_working_directory+"/GIT_CACHE/"+project_name+"_commits"
@@ -173,22 +190,21 @@ def handle_multiprocessing_prediction(commit, current_working_directory, project
       for item in commit_pred:
           prediction_joint_file.writelines(str(item)+"\n")
       prediction_joint_file.close()
+  return
 
-
-def main():
-
+def main(cve, number_of_cpus):
   current_working_directory = os.getcwd()
   # os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
   
   
-  vulnerability_id ="CVE-2019-17572"
+  vulnerability_id = cve
 
 
   os.environ['GIT_CACHE'] = current_working_directory + "/GIT_CACHE"
   GIT_CACHE = os.environ['GIT_CACHE']
   # startTime = datetime.now()
   # print('starting time: '+str(startTime))
-  statments_yaml = open("statements/"+vulnerability_id+"/statement.yaml",'r')
+  statments_yaml = open(current_working_directory+"/statements/"+vulnerability_id+"/statement.yaml",'r')
   parsed_statments =  yaml.load(statments_yaml, Loader=yaml.FullLoader)
   project_url = ''
   commit_sha = ''
@@ -201,27 +217,17 @@ def main():
       raise SystemExit("please provide project URL and fix commit SHA and restart")
 
   project_name=project_url.split('/')[-1]
+  if len(project_url.split('.')) > 1:
+    if project_url.split('.')[-1] == 'git':
+      project_url = '.'.join(project_url.split('.')[:-1])
+      project_name = project_name.split('.')[0]
   print(project_name)
 
 
-  nlp= spacy.load("en_core_web_lg")
-  
-  nlp.add_pipe(remove_stopwords, name="stopwords", last=True)
-
-  
-  stop_word = open(current_working_directory+"/stop_word.txt", "r")
-  stop_list = stop_word.readline().split(",")
-  # Add project name sto stopwords
-  stop_list.append(project_name)
-  # Updates spaCy's default stop words list with my additional words. 
-  nlp.Defaults.stop_words.update(stop_list)
+  # nlp= spacy.load("en_core_web_lg")
 
 
-  for word in STOP_WORDS:
-    lexeme = nlp.vocab[word]
-    lexeme.is_stop = True
 
-  nlp.add_pipe(lemmatizer,name='lemmatizer',after='ner')
 
 
 
@@ -265,16 +271,18 @@ def main():
   project_commits_path = GIT_CACHE+"/"+project_name+"_commits"
   if not os.path.isdir(project_commits_path):
     os.mkdir(project_commits_path)
-  os.chdir(project_commits_path)
+  os.chdir(current_working_directory)
   #CREATING A FOLDER FOR EACH COMMIT
-  input_list = [(commit, current_working_directory, project_name, vulnerability_id) for commit in commit_list]
-  with Pool(6) as p:
+  input_list = [(commit, current_working_directory, project_name, vulnerability_id, project_url) for commit in commit_list]
+  with Pool(number_of_cpus) as p:
+  # with Pool(6) as p:
     # p.map(gather_commit_multi, [commit for commit in tqdm(commit_list)], current_working_directory, project_name)
     p.starmap(gather_commit_multi, input_list)
 
-
+  os.chdir(current_working_directory)
   input_list = [(commit, current_working_directory, project_name, nlp) for commit in tqdm(commit_list)]
-  with Pool(6) as p:
+  with Pool(number_of_cpus) as p:
+  # with Pool(6) as p:
     # p.map(gather_commit_multi, [commit for commit in tqdm(commit_list)], current_working_directory, project_name)
     p.starmap(handle_multiprocessing_prediction, input_list)
 
@@ -335,7 +343,7 @@ def main():
 
   print('started at: '+str(startTime))
   print('finished at: '+str(endTime))
-
+  os.chdir(current_working_directory)
 
 if __name__ == "__main__":
   main()

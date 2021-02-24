@@ -172,6 +172,9 @@ def main():
       raise SystemExit("please provide project URL and fix commit SHA and restart")
 
   project_name=project_url.split('/')[-1]
+  if len(project_name.split('.')) > 1:
+    if project_name.split('.')[1] == 'git':
+      project_name = project_name.split('.')[0]
   print(project_name)
 
 
