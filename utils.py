@@ -216,6 +216,7 @@ def reservoir_sampling(input_list, N):
 
 
 def extract_files_from_diff(project_url,commit_sha):
+    MAX_FILE_NUMBER = 20
 
     git_repo = Git(project_url, cache_path=GIT_CACHE)
     git_repo.clone(skip_existing=True)
@@ -243,21 +244,25 @@ def extract_files_from_diff(project_url,commit_sha):
                             paths_list.append(path)
     except:
         return        
-
+    java_path_list = list()
     for path in paths_list: 
         file_name = path.split('/')[-1].rstrip("\n")
         file_type = file_name.split('.')[-1]
         if file_type == 'java':
-            cmd = ["git", "show", commit_sha+":"+path]
-            try:
-                out = git_repo._exec.run(cmd)
-                with open("committed_files/"+file_name,"w") as f:
-                    for item in out:
-                        f.write("%s\n" % item)
-                    f.close()
-            except:
-                print("Git command failed. Could not obtain commit ids.")
-                return 
+            java_path_list.append(path)
+    if len(java_path_list) >= MAX_FILE_NUMBER:
+      return
+    for java_path in java_path_list:        
+        cmd = ["git", "show", commit_sha+":"+java_path]
+        try:
+            out = git_repo._exec.run(cmd)
+            with open("committed_files/"+file_name,"w") as f:
+                for item in out:
+                    f.write("%s\n" % item)
+                f.close()
+        except:
+            print("Git command failed. Could not obtain commit ids.")
+            return 
 
 def folder_cleaner(commit, project_commits_path):
     os.chdir("..")
