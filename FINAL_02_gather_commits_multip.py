@@ -77,7 +77,7 @@ for word in STOP_WORDS:
 def make_prediction(project_name, processed_file, current_working_directory, nlp):
     # nlp = spacy.load("en_core_web_lg")
     doc_list = []
-    nlp.max_length = 5000000
+    nlp.max_length = 3000000
     pr=nlp(str(processed_file))
     doc_list.append(pr)
     # Creates, which is a mapping of word IDs to words.
@@ -265,8 +265,19 @@ def main(cve, number_of_cpus):
   commit_list_file.close()
 
   print('list saved')
-  # commit_list = ['e07263dedad7ed44e188abb11260fa3061afadc4']
-
+  # # commit_list = ['e07263dedad7ed44e188abb11260fa3061afadc4']
+  # if "d77c3b2f1ce37238c1a730fcc5a1c3fe92100395" in commit_list:
+  #     commit_list.remove("d77c3b2f1ce37238c1a730fcc5a1c3fe92100395")
+  if "163a5aa4386ca1355c14f837f42a3d3917a303b5" in commit_list:
+      commit_list.remove("163a5aa4386ca1355c14f837f42a3d3917a303b5")
+  if "d6e0ab3a10b048be458ffccc6b14ae09dca2891c" in commit_list:
+      commit_list.remove("d6e0ab3a10b048be458ffccc6b14ae09dca2891c")
+  if "d6e0ab3a10b048be458ffccc6b14ae09dca2891c" in commit_list:
+      commit_list.remove("d6e0ab3a10b048be458ffccc6b14ae09dca2891c")
+  if "75ff5b5a89a179d006b7b57c84b8c9130b240e57" in commit_list:
+      commit_list.remove("75ff5b5a89a179d006b7b57c84b8c9130b240e57")
+  if "b4efb6c472715756f9920a653be70d3ce16767cc" in commit_list:
+      commit_list.remove("b4efb6c472715756f9920a653be70d3ce16767cc")
   #CREATE PROJECT COMMITS LIST
   project_commits_path = GIT_CACHE+"/"+project_name+"_commits"
   if not os.path.isdir(project_commits_path):

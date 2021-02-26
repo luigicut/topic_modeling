@@ -10,7 +10,12 @@ number_of_cpus = os.cpu_count()
 
 def main():
   # cve="CVE-2019-17572"
-  cve_list = ["CVE-2018-17297", "CVE-2018-12972", "CVE-2018-11248", "CVE-2018-1000850", "CVE-2018-1000844", "CVE-2016-2402"]
+  # cve_list = ["CVE-2018-17297", "CVE-2018-12972", "CVE-2018-11248", "CVE-2018-1000850", "CVE-2018-1000844", "CVE-2016-2402"]
+  # "CVE-2015-1427", "CVE-2015-4165", "CVE-2015-5531", "CVE-2019-7619", "CVE-2020-7009",
+  cve_list = ["CVE-2020-7019", "CVE-2013-4152", "CVE-2013-6429",
+    "CVE-2013-6430", "CVE-2013-7315", "CVE-2014-0054", "CVE-2014-0225", "CVE-2014-1904", "CVE-2014-3578", "CVE-2014-3625", "CVE-2015-0201",
+    "CVE-2015-3192", "CVE-2016-5007", "CVE-2016-9878", "CVE-2018-11039", "CVE-2018-11040", "CVE-2018-1257", "CVE-2018-1270", "CVE-2018-1271",
+    "CVE-2018-1272", "CVE-2018-1275", "CVE-2018-15756", "CVE-2020-5397","CVE-2020-5398", "CVE-2018-10237"]
 
   for cve in cve_list: 
 
@@ -43,7 +48,7 @@ def main():
     print('starting time: '+str(startTime))
 
     models(cve, number_of_cpus=6)
-    commits(cve, number_of_cpus=6)
+    commits(cve, number_of_cpus=5)
     spacy_pred(cve)
     fasttext_pred(cve)
     order(cve, 'spacy')

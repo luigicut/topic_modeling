@@ -221,27 +221,28 @@ def extract_files_from_diff(project_url,commit_sha):
     git_repo.clone(skip_existing=True)
 
     commit = Commit(git_repo, commit_sha)
+    try: 
+        diff = commit._exec.run(['git', 'diff', commit._id + "^.." + commit._id])
 
-    diff = commit._exec.run(['git', 'diff', commit._id + "^.." + commit._id])
+        to_create_file = open(commit_sha+'.diff', 'wb')
+        for item in diff:
+            to_create_file.write(("%s\n" % item).encode('utf8'))
 
-    to_create_file = open(commit_sha+'.diff', 'wb')
-    for item in diff:
-        to_create_file.write(("%s\n" % item).encode('utf8'))
+        to_create_file.close()
 
-    to_create_file.close()
-
-    byte_tmp_file = open(commit_sha+'.diff', "rb")
-    file_type = chardet.detect(byte_tmp_file.read())['encoding']
-    paths_list = list()
-    if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
-        with open(commit_sha+'.diff', "r", encoding="utf8") as diff_file:
-            lines = diff_file.readlines()
-            for i in range(0, len(lines)):
-                if (lines[i].startswith('diff --git ')):
-                    if not lines[i+1].startswith('deleted') and not lines[i+1].startswith('similarity'):
-                        path = lines[i].split(' b/')[1].rstrip("\n")
-                        paths_list.append(path)
-            
+        byte_tmp_file = open(commit_sha+'.diff', "rb")
+        file_type = chardet.detect(byte_tmp_file.read())['encoding']
+        paths_list = list()
+        if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':
+            with open(commit_sha+'.diff', "r", encoding="utf8") as diff_file:
+                lines = diff_file.readlines()
+                for i in range(0, len(lines)):
+                    if (lines[i].startswith('diff --git ')):
+                        if not lines[i+1].startswith('deleted') and not lines[i+1].startswith('similarity'):
+                            path = lines[i].split(' b/')[1].rstrip("\n")
+                            paths_list.append(path)
+    except:
+        return        
 
     for path in paths_list: 
         file_name = path.split('/')[-1].rstrip("\n")
