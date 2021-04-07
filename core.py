@@ -53,7 +53,10 @@ class Git:
         self.repository_type = 'GIT'
         self._verbose = verbose
         self._url = url
-        self._path = os.path.join(cache_path, self._url.rstrip('/').split('/')[-1])
+        if url == "https://github.com/perwendel/spark":
+          self._path = os.path.join(cache_path, "perwendel-spark")
+        else:
+          self._path = os.path.join(cache_path, self._url.rstrip('/').split('/')[-1])
         self._fingerprints = dict()
         self._exec_timeout = None
         self._shallow_clone = shallow

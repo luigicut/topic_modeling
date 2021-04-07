@@ -7,8 +7,10 @@ GIT_CACHE = os.environ['GIT_CACHE']
 from scipy import spatial
 import fasttext
 import gather_commits
+import utils
 import re
 import yaml
+from tqdm import tqdm
 
 def main(cve):
   vulnerability_id = cve
@@ -44,11 +46,31 @@ def main(cve):
   cve_keywords = [x.strip() for x in cve_keywords] 
   print(str(cve_keywords))
   # os.chdir(candidate_commits_path)
+
   os.chdir(current_working_directory)
-  commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
   os.chdir(cve_path)
   project_commits_path = GIT_CACHE+"/"+project_name+"_commits"
-  for commit in commit_list:
+
+  commit_list = list()
+  with open("outlier_commits_"+vulnerability_id+".txt","r") as commit_list_file:
+      commit_list = commit_list_file.readlines()
+  with open("candidate_commits_"+vulnerability_id+".txt","r") as commit_list_file:
+    # commit_list = commit_list_file.readlines()
+    for line in commit_list_file.readlines():
+      commit_list.append(line) 
+  # you may also want to remove whitespace characters like `\n` at the end of each line
+  commit_list = [x.strip() for x in commit_list] 
+  # print(commit_list)
+
+  valid_commit_list = list()
+  for commit in tqdm(commit_list):
+    if utils.validate_commit(project_url, commit):
+      valid_commit_list.append(commit)
+
+  # commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
+
+  print('fasttext prediction ongoing...')
+  for commit in tqdm(valid_commit_list):
       os.chdir(project_commits_path)
       if os.path.exists(commit):
           prediction_joint_file = open(commit+"/prediction_joint_corpus_"+commit+".txt","r")

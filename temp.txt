@@ -1,0 +1,465 @@
+diff --git a/docs/reference/docs/termvectors.asciidoc b/docs/reference/docs/termvectors.asciidoc
+index 2a72956f6ae..4f4acac75b6 100644
+--- a/docs/reference/docs/termvectors.asciidoc
++++ b/docs/reference/docs/termvectors.asciidoc
+@@ -249,7 +249,7 @@ curl -XGET 'http://localhost:9200/twitter/tweet/1/_termvector?pretty=true' -d '{
+ [float]
+ === Example 3
+-Additionally, term vectors can also be generated for artificial documents,
++Term vectors can also be generated for artificial documents,
+ that is for documents not present in the index. The syntax is similar to the
+ <<search-percolate,percolator>> API. For example, the following request would
+ return the same results as in example 1. The mapping used is determined by the
+@@ -271,3 +271,59 @@ curl -XGET 'http://localhost:9200/twitter/tweet/_termvector' -d '{
+ }'
+ --------------------------------------------------
++[float]
++[[docs-termvectors-per-field-analyzer]]
++=== Example 4 coming[1.5.0]
++
++Additionally, a different analyzer than the one at the field may be provided
++by using the `per_field_analyzer` parameter. This is useful in order to
++generate term vectors in any fashion, especially when using artificial
++documents. When providing an analyzer for a field that already stores term
++vectors, the term vectors will be re-generated.
++
++[source,js]
++--------------------------------------------------
++curl -XGET 'http://localhost:9200/twitter/tweet/_termvector' -d '{
++  "doc" : {
++    "fullname" : "John Doe",
++    "text" : "twitter test test test"
++  },
++  "fields": ["fullname"],
++  "per_field_analyzer" : {
++    "fullname": "keyword"
++  }
++}'
++--------------------------------------------------
++
++Response:
++
++[source,js]
++--------------------------------------------------
++{
++  "_index": "twitter",
++  "_type": "tweet",
++  "_version": 0,
++  "found": true,
++  "term_vectors": {
++    "fullname": {
++       "field_statistics": {
++          "sum_doc_freq": 1,
++          "doc_count": 1,
++          "sum_ttf": 1
++       },
++       "terms": {
++          "John Doe": {
++             "term_freq": 1,
++             "tokens": [
++                {
++                   "position": 0,
++                   "start_offset": 0,
++                   "end_offset": 8
++                }
++             ]
++          }
++       }
++    }
++  }
++}
++--------------------------------------------------
+diff --git a/docs/reference/query-dsl/queries/mlt-query.asciidoc b/docs/reference/query-dsl/queries/mlt-query.asciidoc
+index 61f528c74ba..04276517917 100644
+--- a/docs/reference/query-dsl/queries/mlt-query.asciidoc
++++ b/docs/reference/query-dsl/queries/mlt-query.asciidoc
+@@ -19,7 +19,7 @@ running it against one or more fields.
+ More Like This can find documents that are "like" a set of
+ chosen documents. The syntax to specify one or more documents is similar to
+ the <<docs-multi-get,Multi GET API>>, and supports the `ids` or `docs` array.
+-If only one document is specified, the query behaves the same as the 
++If only one document is specified, the query behaves the same as the
+ <<search-more-like-this,More Like This API>>.
+ [source,js]
+@@ -115,9 +115,11 @@ for `ids` or `docs`.
+ |`like_text` |The text to find documents like it, *required* if `ids` or `docs` are
+ not specified.
+-|`ids` or `docs` |A list of documents following the same syntax as the 
++|`ids` or `docs` |A list of documents following the same syntax as the
+ <<docs-multi-get,Multi GET API>> or <<docs-multi-termvectors,Multi Term Vectors API>>.
+ The text is fetched from `fields` unless specified otherwise in each `doc`.
++The text is analyzed by the default analyzer at the field, unless specified by the
++`per_field_analyzer` parameter of the <<docs-termvectors-per-field-analyzer,Term Vectors API>>.
+ |`include` |When using `ids` or `docs`, specifies whether the documents should be
+ included from the search. Defaults to `false`.
+diff --git a/src/main/java/org/elasticsearch/action/termvector/TermVectorRequest.java b/src/main/java/org/elasticsearch/action/termvector/TermVectorRequest.java
+index da80d286e6e..d7ebe4ad622 100644
+--- a/src/main/java/org/elasticsearch/action/termvector/TermVectorRequest.java
++++ b/src/main/java/org/elasticsearch/action/termvector/TermVectorRequest.java
+@@ -19,7 +19,9 @@
+ package org.elasticsearch.action.termvector;
++import com.google.common.collect.Maps;
+ import com.google.common.collect.Sets;
++import org.elasticsearch.ElasticsearchException;
+ import org.elasticsearch.ElasticsearchParseException;
+ import org.elasticsearch.Version;
+ import org.elasticsearch.action.ActionRequestValidationException;
+@@ -65,6 +67,8 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
+     Boolean realtime;
++    private Map<String, String> perFieldAnalyzer;
++
+     private EnumSet<Flag> flagsEnum = EnumSet.of(Flag.Positions, Flag.Offsets, Flag.Payloads,
+             Flag.FieldStatistics);
+@@ -314,6 +318,21 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
+         return this;
+     }
++    /**
++     * Return the overridden analyzers at each field
++     */
++    public Map<String, String> perFieldAnalyzer() {
++        return perFieldAnalyzer;
++    }
++
++    /**
++     * Override the analyzer used at each field when generating term vectors
++     */
++    public TermVectorRequest perFieldAnalyzer(Map<String, String> perFieldAnalyzer) {
++        this.perFieldAnalyzer = perFieldAnalyzer != null && perFieldAnalyzer.size() != 0 ? Maps.newHashMap(perFieldAnalyzer) : null;
++        return this;
++    }
++
+     private void setFlag(Flag flag, boolean set) {
+         if (set && !flagsEnum.contains(flag)) {
+             flagsEnum.add(flag);
+@@ -375,6 +394,9 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
+             }
+         }
+         if (in.getVersion().onOrAfter(Version.V_1_5_0)) {
++            if (in.readBoolean()) {
++                perFieldAnalyzer = readPerFieldAnalyzer(in.readMap());
++            }
+             this.realtime = in.readBoolean();
+         }
+     }
+@@ -411,6 +433,10 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
+             out.writeVInt(0);
+         }
+         if (out.getVersion().onOrAfter(Version.V_1_5_0)) {
++            out.writeBoolean(perFieldAnalyzer != null);
++            if (perFieldAnalyzer != null) {
++                out.writeGenericValue(perFieldAnalyzer);
++            }
+             out.writeBoolean(realtime());
+         }
+     }
+@@ -451,6 +477,8 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
+                     termVectorRequest.termStatistics(parser.booleanValue());
+                 } else if (currentFieldName.equals("field_statistics") || currentFieldName.equals("fieldStatistics")) {
+                     termVectorRequest.fieldStatistics(parser.booleanValue());
++                } else if (currentFieldName.equals("per_field_analyzer") || currentFieldName.equals("perFieldAnalyzer")) {
++                    termVectorRequest.perFieldAnalyzer(readPerFieldAnalyzer(parser.map()));
+                 } else if ("_index".equals(currentFieldName)) { // the following is important for multi request parsing.
+                     termVectorRequest.index = parser.text();
+                 } else if ("_type".equals(currentFieldName)) {
+@@ -478,4 +506,17 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
+             termVectorRequest.selectedFields(fields.toArray(fieldsAsArray));
+         }
+     }
++
++    private static Map<String, String> readPerFieldAnalyzer(Map<String, Object> map) {
++        Map<String, String> mapStrStr = new HashMap<>();
++        for (Map.Entry<String, Object> e : map.entrySet()) {
++            if (e.getValue() instanceof String) {
++                mapStrStr.put(e.getKey(), (String) e.getValue());
++            } else {
++                throw new ElasticsearchException(
++                        "The analyzer at " + e.getKey() + " should be of type String, but got a " + e.getValue().getClass() + "!");
++            }
++        }
++        return mapStrStr;
++    }
+ }
+diff --git a/src/main/java/org/elasticsearch/action/termvector/TermVectorRequestBuilder.java b/src/main/java/org/elasticsearch/action/termvector/TermVectorRequestBuilder.java
+index 50afd2e8d4a..522000a8255 100644
+--- a/src/main/java/org/elasticsearch/action/termvector/TermVectorRequestBuilder.java
++++ b/src/main/java/org/elasticsearch/action/termvector/TermVectorRequestBuilder.java
+@@ -24,6 +24,8 @@ import org.elasticsearch.action.ActionRequestBuilder;
+ import org.elasticsearch.client.Client;
+ import org.elasticsearch.common.xcontent.XContentBuilder;
++import java.util.Map;
++
+ /**
+  */
+ public class TermVectorRequestBuilder extends ActionRequestBuilder<TermVectorRequest, TermVectorResponse, TermVectorRequestBuilder, Client> {
+@@ -131,6 +133,11 @@ public class TermVectorRequestBuilder extends ActionRequestBuilder<TermVectorReq
+         return this;
+     }
++    public TermVectorRequestBuilder setPerFieldAnalyzer(Map<String, String> perFieldAnalyzer) {
++        request.perFieldAnalyzer(perFieldAnalyzer);
++        return this;
++    }
++
+     @Override
+     protected void doExecute(ActionListener<TermVectorResponse> listener) {
+         client.termVector(request, listener);
+diff --git a/src/main/java/org/elasticsearch/index/termvectors/ShardTermVectorService.java b/src/main/java/org/elasticsearch/index/termvectors/ShardTermVectorService.java
+index 05aabfcc2f6..84b9480470d 100644
+--- a/src/main/java/org/elasticsearch/index/termvectors/ShardTermVectorService.java
++++ b/src/main/java/org/elasticsearch/index/termvectors/ShardTermVectorService.java
+@@ -26,6 +26,7 @@ import org.elasticsearch.ElasticsearchException;
+ import org.elasticsearch.action.termvector.TermVectorRequest;
+ import org.elasticsearch.action.termvector.TermVectorResponse;
+ import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
++import org.elasticsearch.common.Nullable;
+ import org.elasticsearch.common.Strings;
+ import org.elasticsearch.common.bytes.BytesReference;
+ import org.elasticsearch.common.collect.Tuple;
+@@ -107,9 +108,14 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
+             else if (docIdAndVersion != null) {
+                 // fields with stored term vectors
+                 Fields termVectorsByField = docIdAndVersion.context.reader().getTermVectors(docIdAndVersion.docId);
++                Set<String> selectedFields = request.selectedFields();
++                // generate tvs for fields where analyzer is overridden
++                if (selectedFields == null && request.perFieldAnalyzer() != null) {
++                    selectedFields = getFieldsToGenerate(request.perFieldAnalyzer(), termVectorsByField);
++                }
+                 // fields without term vectors
+-                if (request.selectedFields() != null) {
+-                    termVectorsByField = addGeneratedTermVectors(get, termVectorsByField, request);
++                if (selectedFields != null) {
++                    termVectorsByField = addGeneratedTermVectors(get, termVectorsByField, request, selectedFields);
+                 }
+                 termVectorResponse.setFields(termVectorsByField, request.selectedFields(), request.getFlags(), topLevelFields);
+                 termVectorResponse.setDocVersion(docIdAndVersion.version);
+@@ -146,16 +152,17 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
+         return true;
+     }
+-    private Fields addGeneratedTermVectors(Engine.GetResult get, Fields termVectorsByField, TermVectorRequest request) throws IOException {
++    private Fields addGeneratedTermVectors(Engine.GetResult get, Fields termVectorsByField, TermVectorRequest request, Set<String> selectedFields) throws IOException {
+         /* only keep valid fields */
+         Set<String> validFields = new HashSet<>();
+-        for (String field : request.selectedFields()) {
++        for (String field : selectedFields) {
+             FieldMapper fieldMapper = indexShard.mapperService().smartNameFieldMapper(field);
+             if (!isValidField(fieldMapper)) {
+                 continue;
+             }
+-            // already retrieved
+-            if (fieldMapper.fieldType().storeTermVectors()) {
++            // already retrieved, only if the analyzer hasn't been overridden at the field
++            if (fieldMapper.fieldType().storeTermVectors() &&
++                    (request.perFieldAnalyzer() == null || !request.perFieldAnalyzer().containsKey(field))) {
+                 continue;
+             }
+             validFields.add(field);
+@@ -168,25 +175,47 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
+         /* generate term vectors from fetched document fields */
+         GetResult getResult = indexShard.getService().get(
+                 get, request.id(), request.type(), validFields.toArray(Strings.EMPTY_ARRAY), null, false);
+-        Fields generatedTermVectors = generateTermVectors(getResult.getFields().values(), request.offsets());
++        Fields generatedTermVectors = generateTermVectors(getResult.getFields().values(), request.offsets(), request.perFieldAnalyzer());
+         /* merge with existing Fields */
+         if (termVectorsByField == null) {
+             return generatedTermVectors;
+         } else {
+-            return mergeFields(request.selectedFields().toArray(Strings.EMPTY_ARRAY), termVectorsByField, generatedTermVectors);
++            return mergeFields(termVectorsByField, generatedTermVectors);
+         }
+     }
+-    private Fields generateTermVectors(Collection<GetField> getFields, boolean withOffsets) throws IOException {
++    private Analyzer getAnalyzerAtField(String field, @Nullable Map<String, String> perFieldAnalyzer) {
++        MapperService mapperService = indexShard.mapperService();
++        Analyzer analyzer;
++        if (perFieldAnalyzer != null && perFieldAnalyzer.containsKey(field)) {
++            analyzer = mapperService.analysisService().analyzer(perFieldAnalyzer.get(field).toString());
++        } else {
++            analyzer = mapperService.smartNameFieldMapper(field).indexAnalyzer();
++        }
++        if (analyzer == null) {
++            analyzer = mapperService.analysisService().defaultIndexAnalyzer();
++        }
++        return analyzer;
++    }
++
++    private Set<String> getFieldsToGenerate(Map<String, String> perAnalyzerField, Fields fieldsObject) {
++        Set<String> selectedFields = new HashSet<>();
++        for (String fieldName : fieldsObject) {
++            if (perAnalyzerField.containsKey(fieldName)) {
++                selectedFields.add(fieldName);
++            }
++        }
++        return selectedFields;
++    }
++
++    private Fields generateTermVectors(Collection<GetField> getFields, boolean withOffsets, @Nullable Map<String, String> perFieldAnalyzer)
++            throws IOException {
+         /* store document in memory index */
+         MemoryIndex index = new MemoryIndex(withOffsets);
+         for (GetField getField : getFields) {
+             String field = getField.getName();
+-            Analyzer analyzer = indexShard.mapperService().smartNameFieldMapper(field).indexAnalyzer();
+-            if (analyzer == null) {
+-                analyzer = indexShard.mapperService().analysisService().defaultIndexAnalyzer();
+-            }
++            Analyzer analyzer = getAnalyzerAtField(field, perFieldAnalyzer);
+             for (Object text : getField.getValues()) {
+                 index.addField(field, text.toString(), analyzer);
+             }
+@@ -223,7 +252,7 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
+             String[] values = doc.getValues(field.name());
+             getFields.add(new GetField(field.name(), Arrays.asList((Object[]) values)));
+         }
+-        return generateTermVectors(getFields, request.offsets());
++        return generateTermVectors(getFields, request.offsets(), request.perFieldAnalyzer());
+     }
+     private ParsedDocument parseDocument(String index, String type, BytesReference doc) {
+@@ -239,15 +268,21 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
+         return parsedDocument;
+     }
+-    private Fields mergeFields(String[] fieldNames, Fields... fieldsObject) throws IOException {
++    private Fields mergeFields(Fields fields1, Fields fields2) throws IOException {
+         ParallelFields parallelFields = new ParallelFields();
+-        for (Fields fieldObject : fieldsObject) {
+-            assert fieldObject != null;
+-            for (String fieldName : fieldNames) {
+-                Terms terms = fieldObject.terms(fieldName);
+-                if (terms != null) {
+-                    parallelFields.addField(fieldName, terms);
+-                }
++        for (String fieldName : fields2) {
++            Terms terms = fields2.terms(fieldName);
++            if (terms != null) {
++                parallelFields.addField(fieldName, terms);
++            }
++        }
++        for (String fieldName : fields1) {
++            if (parallelFields.fields.containsKey(fieldName)) {
++                continue;
++            }
++            Terms terms = fields1.terms(fieldName);
++            if (terms != null) {
++                parallelFields.addField(fieldName, terms);
+             }
+         }
+         return parallelFields;
+diff --git a/src/test/java/org/elasticsearch/action/termvector/GetTermVectorTests.java b/src/test/java/org/elasticsearch/action/termvector/GetTermVectorTests.java
+index c4cd4ac204c..8dfab2f3c87 100644
+--- a/src/test/java/org/elasticsearch/action/termvector/GetTermVectorTests.java
++++ b/src/test/java/org/elasticsearch/action/termvector/GetTermVectorTests.java
+@@ -28,6 +28,7 @@ import org.elasticsearch.ElasticsearchException;
+ import org.elasticsearch.action.ActionFuture;
+ import org.elasticsearch.action.admin.indices.alias.Alias;
+ import org.elasticsearch.action.index.IndexRequestBuilder;
++import org.elasticsearch.common.Strings;
+ import org.elasticsearch.common.settings.ImmutableSettings;
+ import org.elasticsearch.common.xcontent.ToXContent;
+ import org.elasticsearch.common.xcontent.XContentBuilder;
+@@ -35,10 +36,7 @@ import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
+ import org.junit.Test;
+ import java.io.IOException;
+-import java.util.ArrayList;
+-import java.util.HashMap;
+-import java.util.List;
+-import java.util.Map;
++import java.util.*;
+ import java.util.concurrent.ExecutionException;
+ import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
+@@ -924,6 +922,99 @@ public class GetTermVectorTests extends AbstractTermVectorTests {
+         }
+     }
++    @Test
++    public void testPerFieldAnalyzer() throws ElasticsearchException, IOException {
++        int numFields = 25;
++
++        // setup mapping and document source
++        Set<String> withTermVectors = new HashSet<>();
++        XContentBuilder mapping = jsonBuilder().startObject().startObject("type1").startObject("properties");
++        XContentBuilder source = jsonBuilder().startObject();
++        for (int i = 0; i < numFields; i++) {
++            String fieldName = "field" + i;
++            if (randomBoolean()) {
++                withTermVectors.add(fieldName);
++            }
++            mapping.startObject(fieldName)
++                    .field("type", "string")
++                    .field("term_vector", withTermVectors.contains(fieldName) ? "yes" : "no")
++                    .endObject();
++            source.field(fieldName, "some text here");
++        }
++        source.endObject();
++        mapping.endObject().endObject().endObject();
++
++        // setup indices with mapping
++        ImmutableSettings.Builder settings = settingsBuilder()
++                .put(indexSettings())
++                .put("index.analysis.analyzer", "standard");
++        assertAcked(prepareCreate("test")
++                .addAlias(new Alias("alias"))
++                .setSettings(settings)
++                .addMapping("type1", mapping));
++        ensureGreen();
++
++        // index a single document with prepared source
++        client().prepareIndex("test", "type1", "0").setSource(source).get();
++        refresh();
++
++        // create random per_field_analyzer and selected fields
++        Map<String, String> perFieldAnalyzer = new HashMap<>();
++        Set<String> selectedFields = new HashSet<>();
++        for (int i = 0; i < numFields; i++) {
++            if (randomBoolean()) {
++                perFieldAnalyzer.put("field" + i, "keyword");
++            }
++            if (randomBoolean()) {
++                perFieldAnalyzer.put("non_existing" + i, "keyword");
++            }
++            if (randomBoolean()) {
++                selectedFields.add("field" + i);
++            }
++            if (randomBoolean()) {
++                selectedFields.add("non_existing" + i);
++            }
++        }
++
++        // selected fields not specified
++        TermVectorResponse response = client().prepareTermVector(indexOrAlias(), "type1", "0")
++                .setPerFieldAnalyzer(perFieldAnalyzer)
++                .get();
++
++        // should return all fields that have terms vectors, some with overridden analyzer
++        checkAnalyzedFields(response.getFields(), withTermVectors, perFieldAnalyzer);
++
++        // selected fields specified including some not in the mapping
++        response = client().prepareTermVector(indexOrAlias(), "type1", "0")
++                .setSelectedFields(selectedFields.toArray(Strings.EMPTY_ARRAY))
++                .setPerFieldAnalyzer(perFieldAnalyzer)
++                .get();
++
++        // should return only the specified valid fields, with some with overridden analyzer
++        checkAnalyzedFields(response.getFields(), selectedFields, perFieldAnalyzer);
++    }
++
++    private void checkAnalyzedFields(Fields fieldsObject, Set<String> fieldNames, Map<String, String> perFieldAnalyzer) throws IOException {
++        Set<String> validFields = new HashSet<>();
++        for (String fieldName : fieldNames){
++            if (fieldName.startsWith("non_existing")) {
++                assertThat("Non existing field\"" + fieldName + "\" should not be returned!", fieldsObject.terms(fieldName), nullValue());
++                continue;
++            }
++            Terms terms = fieldsObject.terms(fieldName);
++            assertThat("Existing field " + fieldName + "should have been returned", terms, notNullValue());
++            // check overridden by keyword analyzer ...
++            if (perFieldAnalyzer.containsKey(fieldName)) {
++                TermsEnum iterator = terms.iterator(null);
++                assertThat("Analyzer for " + fieldName + " should have been overridden!", iterator.next().utf8ToString(), equalTo("some text here"));
++                assertThat(iterator.next(), nullValue());
++            }
++            validFields.add(fieldName);
++        }
++        // ensure no other fields are returned
++        assertThat("More fields than expected are returned!", fieldsObject.size(), equalTo(validFields.size()));
++    }
++
+     private static String indexOrAlias() {
+         return randomBoolean() ? "test" : "alias";
+     }

@@ -131,13 +131,13 @@ def main(cve, number_of_cpus):
           dirs[:] = [d for d in dirs if d not in exclude_dir]
           for file in files:
               with open(os.path.join(root, file), "r", encoding="utf-8") as tmp_file:
-                  print(tmp_file.name)
+                  # print(tmp_file.name)
                   file_name = tmp_file.name
                   #Open file as byte to use it with chardet
                   byte_tmp_file = open(os.path.join(root, file), "rb")
                   #Using chardet prediction to exclude not ascii or utf8 files
                   file_type = chardet.detect(byte_tmp_file.read())['encoding']
-                  print(file_type)
+                  # print(file_type)
                   # tmp_file = tmp_file.decode('utf-8','ignore').encode("utf-8")
                   #TODO: Remove None and type Windows-1254 (TIS-620, ISO-8859-1(html), if this give no error)
                   if str(file_type) == 'utf-8' or str(file_type) == 'ascii' or str(file_type) == 'TIS-620':

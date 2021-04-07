@@ -253,31 +253,38 @@ def main(cve, number_of_cpus):
   # candidate_commits_path = current_working_directory+'/diff_commits/'+vulnerability_id+"/"+"candidate_commits"
   vulnerability_path = current_working_directory+'/diff_commits/'+vulnerability_id
 
-  #RETRIVING THE COMMIT LIST
-  commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
-  print(len(commit_list))
-
-  #SAVE CANDIDATE COMMIT LIST FOR SPECIFIC VULNERABILITY
   os.chdir(vulnerability_path)
-  commit_list_file = open("candidate_commits_"+vulnerability_id+".txt","w")
-  for commit in commit_list:
-      commit_list_file.writelines(str(commit)+"\n")
-  commit_list_file.close()
+  #RETREIVING THE COMMIT LIST
+  # commit_list = gather_commits.get_commit_list(vulnerability_id, project_url)
+  # print(len(commit_list))
+  commit_list = list()
+  with open("outlier_commits_"+vulnerability_id+".txt","r") as commit_list_file:
+      commit_list = commit_list_file.readlines()
+  commit_list = [x.strip() for x in commit_list] 
+  #SAVE CANDIDATE COMMIT LIST FOR SPECIFIC VULNERABILITY
 
-  print('list saved')
+
+
+  # commit_list_file = open("candidate_commits_"+vulnerability_id+".txt","w")
+  # for commit in commit_list:
+  #     commit_list_file.writelines(str(commit)+"\n")
+  # commit_list_file.close()
+
+  # print('list saved')
+
   # # commit_list = ['e07263dedad7ed44e188abb11260fa3061afadc4']
   # if "d77c3b2f1ce37238c1a730fcc5a1c3fe92100395" in commit_list:
   #     commit_list.remove("d77c3b2f1ce37238c1a730fcc5a1c3fe92100395")
-  if "163a5aa4386ca1355c14f837f42a3d3917a303b5" in commit_list:
-      commit_list.remove("163a5aa4386ca1355c14f837f42a3d3917a303b5")
-  if "d6e0ab3a10b048be458ffccc6b14ae09dca2891c" in commit_list:
-      commit_list.remove("d6e0ab3a10b048be458ffccc6b14ae09dca2891c")
-  if "d6e0ab3a10b048be458ffccc6b14ae09dca2891c" in commit_list:
-      commit_list.remove("d6e0ab3a10b048be458ffccc6b14ae09dca2891c")
-  if "75ff5b5a89a179d006b7b57c84b8c9130b240e57" in commit_list:
-      commit_list.remove("75ff5b5a89a179d006b7b57c84b8c9130b240e57")
-  if "b4efb6c472715756f9920a653be70d3ce16767cc" in commit_list:
-      commit_list.remove("b4efb6c472715756f9920a653be70d3ce16767cc")
+  # if "163a5aa4386ca1355c14f837f42a3d3917a303b5" in commit_list:
+  #     commit_list.remove("163a5aa4386ca1355c14f837f42a3d3917a303b5")
+  # if "d6e0ab3a10b048be458ffccc6b14ae09dca2891c" in commit_list:
+  #     commit_list.remove("d6e0ab3a10b048be458ffccc6b14ae09dca2891c")
+  # if "d6e0ab3a10b048be458ffccc6b14ae09dca2891c" in commit_list:
+  #     commit_list.remove("d6e0ab3a10b048be458ffccc6b14ae09dca2891c")
+  # if "75ff5b5a89a179d006b7b57c84b8c9130b240e57" in commit_list:
+  #     commit_list.remove("75ff5b5a89a179d006b7b57c84b8c9130b240e57")
+  # if "b4efb6c472715756f9920a653be70d3ce16767cc" in commit_list:
+  #     commit_list.remove("b4efb6c472715756f9920a653be70d3ce16767cc")
   #CREATE PROJECT COMMITS LIST
   project_commits_path = GIT_CACHE+"/"+project_name+"_commits"
   if not os.path.isdir(project_commits_path):

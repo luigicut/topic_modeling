@@ -1,4 +1,6 @@
 import os, spacy, yaml, re
+import utils
+from tqdm import tqdm
 
 
 def main(cve):
@@ -43,12 +45,23 @@ def main(cve):
   print(str(cve_keywords))
 
   commit_list = list()
-  with open("candidate_commits_"+vulnerability_id+".txt","r") as commit_list_file:
+  with open("outlier_commits_"+vulnerability_id+".txt","r") as commit_list_file:
       commit_list = commit_list_file.readlines()
+  with open("candidate_commits_"+vulnerability_id+".txt","r") as commit_list_file:
+    for line in commit_list_file.readlines():
+      commit_list.append(line) 
+    # commit_list = commit_list_file.readlines()
   # you may also want to remove whitespace characters like `\n` at the end of each line
   commit_list = [x.strip() for x in commit_list] 
-  print(commit_list)
-  for commit in commit_list:
+  # print(commit_list)
+
+  valid_commit_list = list()
+  for commit in tqdm(commit_list):
+    if utils.validate_commit(project_url, commit):
+      valid_commit_list.append(commit)
+
+  print('spacy prediction ongoing...')
+  for commit in tqdm(valid_commit_list):
       os.chdir(project_commits_path)
       # print('project_commits_path: '+project_commits_path)
       if os.path.exists(commit):

@@ -285,3 +285,43 @@ def license_remove(txt, delim=('/*', '*/')):
     else:
         out = txt
     return out
+
+
+def validate_commit(project_url, commit_sha):
+  MAX_FILE_NUMBER = 20
+
+  git_repo = Git(project_url, cache_path=GIT_CACHE)
+  git_repo.clone(skip_existing=True)
+
+  commit = Commit(git_repo, commit_sha)
+
+
+  try:
+    diff = commit._exec.run(['git', 'diff', commit._id + "^.." + commit._id])
+    paths_list = list()
+    for i in range(0, len(diff)):
+      if (diff[i].startswith('diff --git ')):
+        if not diff[i+1].startswith('deleted') and not diff[i+1].startswith('similarity'):
+          path = diff[i].split(' b/')[1].rstrip("\n")
+          paths_list.append(path)
+  except:
+    return False
+  java_path_list = list()
+  for path in paths_list: 
+      file_name = path.split('/')[-1].rstrip("\n")
+      file_type = file_name.split('.')[-1]
+      if file_type == 'java':
+          java_path_list.append(path)
+  if len(java_path_list) >= MAX_FILE_NUMBER:
+    return False
+  else:
+    return True
+
+def get_msg(project_url, commit_sha):
+  git_repo = Git(project_url, cache_path=GIT_CACHE)
+  git_repo.clone(skip_existing=True)
+  try:
+    commit = Commit(git_repo, commit_sha)
+    return commit._exec.run(['git', 'log', '--format=%B', '-n1', commit._id])
+  except:
+    return ''
